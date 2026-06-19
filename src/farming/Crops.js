@@ -1,0 +1,35 @@
+export const CROPS = {
+  wheat: {
+    id: 'wheat',
+    name: '麦',
+    seedItem: 'wheat_seed',
+    harvestItem: 'wheat',
+    harvestCount: [2, 4],
+    growthTime: 30,   // seconds per stage (debug: short)
+    stages: 4,
+    stageColors: [0x6b4f28, 0x6b8c3a, 0x9bbd4a, 0xd4a017],
+    stageHeights: [0.1, 0.3, 0.55, 0.7],
+  },
+  pumpkin: {
+    id: 'pumpkin',
+    name: 'カボチャ',
+    seedItem: 'pumpkin_seed',
+    harvestItem: 'pumpkin',
+    harvestCount: [1, 2],
+    growthTime: 45,
+    stages: 4,
+    stageColors: [0x6b4f28, 0x4a8040, 0x6b9e4a, 0xe8821a],
+    stageHeights: [0.1, 0.25, 0.4, 0.5],
+  },
+  herb: {
+    id: 'herb',
+    name: 'ハーブ',
+    seedItem: 'herb_seed',
+    harvestItem: 'herb',
+    harvestCount: [2, 5],
+    growthTime: 20,
+    stages: 4,
+    stageColors: [0x6b4f28, 0x3a7a3a, 0x5a9a3a, 0x7abf50],
+    stageHeights: [0.05, 0.2, 0.35, 0.45],
+  },
+};

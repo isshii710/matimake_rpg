@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>はじまりの集落</title>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "postprocessing": "https://cdn.jsdelivr.net/npm/postprocessing@6.36.3/build/postprocessing.esm.js"
+    }
+  }
+  </script>
+
+  <style>
+    /* ── Reset & base ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #060302; }
+
+    /* ── Canvas ─────────────────────────────────────────────── */
+    #game-canvas {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* ── Loading screen ─────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #0a0502;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.6s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading h1 {
+      color: #d4a540;
+      font-family: serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px rgba(212,165,64,0.6);
+    }
+    .load-bar-bg {
+      width: 220px; height: 6px;
+      background: #2a1a05;
+      border: 1px solid #6B4F14;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .load-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #8B6914, #d4a540);
+      animation: loadAnim 1.5s ease-in-out forwards;
+    }
+    @keyframes loadAnim { from { width: 0 } to { width: 100% } }
+    .load-sub { color: #a08050; font-family: monospace; font-size: 0.8rem; margin-top: 0.6rem; }
+
+    /* ── UI Overlay ─────────────────────────────────────────── */
+    #ui-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    }
+
+    /* ── Common panel style ─────────────────────────────────── */
+    .panel {
+      background: rgba(12, 7, 2, 0.88);
+      border: 1px solid #6B4F14;
+      border-radius: 5px;
+      color: #e8d090;
+      pointer-events: auto;
+    }
+    .panel-title {
+      font-size: 11px;
+      color: #a08040;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    /* ── Quest panel (top-left) ─────────────────────────────── */
+    #quest-panel {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      width: 230px;
+      padding: 10px 12px;
+      pointer-events: auto;
+    }
+    #quest-panel h3 {
+      font-size: 12px;
+      color: #d4a540;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #4a3010;
+      padding-bottom: 4px;
+    }
+    .quest-item { margin-bottom: 8px; }
+    .quest-title { font-size: 12px; color: #f0d080; font-weight: bold; }
+    .quest-obj {
+      font-size: 10px;
+      color: #a09060;
+      margin-top: 2px;
+      padding-left: 8px;
+    }
+    .quest-obj.done { color: #60cc80; text-decoration: line-through; }
+
+    /* ── Stats panel (top-right) ────────────────────────────── */
+    #stats-panel {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: 180px;
+      padding: 10px 12px;
+      pointer-events: auto;
+    }
+    #day-label {
+      font-size: 11px;
+      color: #d4a540;
+      text-align: right;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+    .stat-label { font-size: 10px; color: #a08040; width: 20px; flex-shrink: 0; }
+    .bar-bg {
+      flex: 1;
+      height: 10px;
+      background: #1a0e04;
+      border: 1px solid #4a3010;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #22bb44, #88ee66);
+      transition: width 0.3s, background 0.3s;
+    }
+    .bar-fill.stamina { background: linear-gradient(90deg, #2255cc, #4488ff); }
+    #hp-text { font-size: 10px; color: #a0c080; width: 52px; text-align: right; flex-shrink: 0; }
+
+    /* ── Build panel (top-center) ───────────────────────────── */
+    #build-panel {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+      z-index: 15;
+    }
+    #build-toggle {
+      background: rgba(30, 18, 5, 0.92);
+      border: 1px solid #8B6914;
+      border-radius: 5px;
+      color: #d4a540;
+      padding: 6px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #build-toggle:hover { background: rgba(60, 38, 10, 0.95); border-color: #d4a540; }
+
+    #build-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 340px;
+      max-height: 320px;
+      background: rgba(10, 6, 2, 0.96);
+      border: 1px solid #8B6914;
+      border-radius: 6px;
+      padding: 8px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    }
+    #build-menu::-webkit-scrollbar { width: 5px; }
+    #build-menu::-webkit-scrollbar-track { background: #1a0e04; }
+    #build-menu::-webkit-scrollbar-thumb { background: #6B4F14; border-radius: 3px; }
+
+    #build-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .tab-btn {
+      background: #1a0e04;
+      border: 1px solid #4a3010;
+      color: #a08040;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { background: #2a1a06; }
+    .tab-btn.active {
+      background: rgba(80, 52, 12, 0.9);
+      border-color: #d4a540;
+      color: #f0d080;
+    }
+    .build-item {
+      background: rgba(20, 12, 4, 0.8);
+      border: 1px solid #3a2808;
+      border-radius: 4px;
+      padding: 7px 10px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .build-item:hover, .build-item.active {
+      background: rgba(70, 44, 10, 0.9);
+      border-color: #d4a540;
+    }
+    .build-name { font-size: 13px; color: #f0d890; font-weight: 600; }
+    .build-cost { font-size: 11px; color: #cc9944; margin: 2px 0; }
+    .build-desc { font-size: 10px; color: #807050; }
+
+    /* ── Mode label ─────────────────────────────────────────── */
+    #mode-label {
+      position: fixed;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 6, 2, 0.88);
+      border: 1px solid #8B6914;
+      border-radius: 4px;
+      color: #d4a540;
+      font-size: 12px;
+      padding: 4px 14px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ── Dialog box ─────────────────────────────────────────── */
+    #dialog-box {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 6, 2, 0.94);
+      border: 1px solid #8B6914;
+      border-radius: 6px;
+      color: #f0d8a0;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 12px 22px;
+      max-width: 520px;
+      width: max-content;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 20;
+      white-space: pre-line;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+    #dialog-box.visible { opacity: 1; }
+
+    /* ── Inventory bar (bottom-center) ──────────────────────── */
+    #inventory-panel {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+    #inventory {
+      display: flex;
+      gap: 4px;
+      background: rgba(10, 6, 2, 0.9);
+      border: 1px solid #6B4F14;
+      border-radius: 6px;
+      padding: 6px;
+    }
+    .inv-slot {
+      width: 54px;
+      height: 54px;
+      background: rgba(20, 12, 4, 0.8);
+      border: 1px solid #3a2808;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .inv-slot:hover { background: rgba(50, 32, 8, 0.9); border-color: #8B6914; }
+    .inv-slot.selected { border-color: #d4a540; background: rgba(80, 52, 12, 0.85); }
+    .inv-slot.empty { cursor: default; opacity: 0.35; }
+    .inv-slot.empty:hover { background: rgba(20, 12, 4, 0.8); border-color: #3a2808; }
+    .inv-icon { font-size: 26px; line-height: 1; }
+    .inv-count {
+      font-size: 10px;
+      color: #f0d890;
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    /* ── Controls hint (PC) ─────────────────────────────────── */
+    #controls-hint {
+      position: fixed;
+      bottom: 80px;
+      left: 12px;
+      background: rgba(8, 5, 2, 0.78);
+      border: 1px solid #3a2808;
+      border-radius: 4px;
+      color: #806840;
+      font-size: 10px;
+      padding: 6px 10px;
+      line-height: 1.7;
+      pointer-events: none;
+    }
+
+    /* ── Mobile DPad ────────────────────────────────────────── */
+    #dpad-container {
+      position: fixed;
+      bottom: 28px;
+      left: 24px;
+      pointer-events: auto;
+      display: none;
+    }
+    .dpad-grid {
+      display: grid;
+      grid-template-columns: 52px 52px 52px;
+      grid-template-rows: 52px 52px 52px;
+      gap: 3px;
+    }
+    .dpad-btn {
+      background: rgba(12, 8, 2, 0.82);
+      border: 2px solid #6B4F14;
+      border-radius: 8px;
+      color: #d4a080;
+      font-size: 20px;
+      cursor: pointer;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .dpad-btn:active { background: rgba(60, 38, 10, 0.9); }
+    .dpad-center { background: rgba(6, 4, 1, 0.5); border-color: #2a1a05; }
+
+    #attack-btn {
+      position: fixed;
+      bottom: 40px;
+      right: 28px;
+      width: 70px;
+      height: 70px;
+      background: rgba(80, 20, 10, 0.88);
+      border: 2px solid #cc4422;
+      border-radius: 50%;
+      color: #ff8866;
+      font-size: 28px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #attack-btn:active { background: rgba(140, 40, 20, 0.9); }
+
+    @media (pointer: coarse) {
+      #dpad-container { display: block; }
+      #attack-btn { display: flex; }
+      #controls-hint { display: none; }
+    }
+
+    /* ── Misc ───────────────────────────────────────────────── */
+    button { font-family: inherit; }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <h1>はじまりの集落</h1>
+  <div class="load-bar-bg"><div class="load-bar"></div></div>
+  <div class="load-sub">ロード中...</div>
+</div>
+
+<!-- Three.js canvas -->
+<canvas id="game-canvas"></canvas>
+
+<!-- UI overlay -->
+<div id="ui-overlay">
+
+  <!-- Quest panel -->
+  <div id="quest-panel" class="panel">
+    <h3>📋 クエスト</h3>
+    <div id="quest-list"><div style="color:#605040;font-size:11px;">読み込み中...</div></div>
+  </div>
+
+  <!-- Stats panel -->
+  <div id="stats-panel" class="panel">
+    <div id="day-label">年1 春 1日</div>
+    <div class="stat-row">
+      <span class="stat-label">HP</span>
+      <div class="bar-bg"><div id="hp-fill" class="bar-fill" style="width:100%"></div></div>
+      <span id="hp-text">100/100</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">ST</span>
+      <div class="bar-bg"><div id="stamina-fill" class="bar-fill stamina" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Build menu -->
+  <div id="build-panel">
+    <button id="build-toggle">🔨 建設メニュー [B]</button>
+    <div id="build-menu" style="display:none;">
+      <div id="build-tabs"></div>
+      <div id="build-list"></div>
+    </div>
+  </div>
+
+  <!-- Mode label -->
+  <div id="mode-label" style="display:none;"></div>
+
+  <!-- Dialog box -->
+  <div id="dialog-box"></div>
+
+  <!-- Inventory -->
+  <div id="inventory-panel">
+    <div id="inventory"></div>
+  </div>
+
+  <!-- Controls hint (desktop) -->
+  <div id="controls-hint">
+    WASD / ↑↓←→ : 移動<br>
+    Space : 攻撃<br>
+    E : 調べる / 水汲み / 収穫<br>
+    B : 建設メニュー<br>
+    クリック : 建設・農業・会話<br>
+    R + クリック : 建物撤去
+  </div>
+
+  <!-- Mobile DPad -->
+  <div id="dpad-container">
+    <div id="dpad" class="dpad-grid">
+      <div></div>
+      <button id="dpad-up"    class="dpad-btn">↑</button>
+      <div></div>
+      <button id="dpad-left"  class="dpad-btn">←</button>
+      <div class="dpad-btn dpad-center"></div>
+      <button id="dpad-right" class="dpad-btn">→</button>
+      <div></div>
+      <button id="dpad-down"  class="dpad-btn">↓</button>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- Mobile attack button -->
+  <button id="attack-btn">⚔</button>
+
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

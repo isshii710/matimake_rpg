@@ -5,11 +5,11 @@ const BUFFER_RADIUS = 16;
 const SAFE_RADIUS = 8;
 
 export class FogOfWar {
-  constructor(scene) {
+  constructor(scene, mobile = false) {
     this.scene = scene;
     this.particles = [];
     this._createFogPlane();
-    this._createParticles();
+    this._createParticles(mobile);
   }
 
   _createFogPlane() {
@@ -48,8 +48,8 @@ export class FogOfWar {
     }
   }
 
-  _createParticles() {
-    const count = 80;
+  _createParticles(mobile = false) {
+    const count = mobile ? 20 : 80;
     const geo = new THREE.SphereGeometry(0.3, 4, 4);
     const mat = new THREE.MeshBasicMaterial({
       color: 0x440000,

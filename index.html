@@ -63,6 +63,15 @@
     }
     @keyframes loadAnim { from { width: 0 } to { width: 100% } }
     .load-sub { color: #a08050; font-family: monospace; font-size: 0.8rem; margin-top: 0.6rem; }
+    #load-error {
+      display: none;
+      color: #ff6644;
+      font-size: 0.85rem;
+      margin-top: 1.2rem;
+      max-width: 280px;
+      text-align: center;
+      font-family: monospace;
+    }
 
     /* ── UI Overlay ─────────────────────────────────────────── */
     #ui-overlay {
@@ -403,6 +412,7 @@
   <h1>はじまりの集落</h1>
   <div class="load-bar-bg"><div class="load-bar"></div></div>
   <div class="load-sub">ロード中...</div>
+  <div id="load-error">読み込みに失敗しました。<br>ページを再読み込みしてください。<br><br><button onclick="location.reload()" style="background:#3d2a0a;border:1px solid #d4a540;color:#d4a540;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:14px;">再読み込み</button></div>
 </div>
 
 <!-- Three.js canvas -->

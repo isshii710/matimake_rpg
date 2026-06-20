@@ -74,8 +74,9 @@ export class BuildMenu {
       const count = this.game.inventory.getCount(b.id);
       const canAfford = Object.entries(b.cost).every(([id, n]) => this.game.inventory.has(id, n));
       const isSelected = this.game.buildSys.selectedId === b.id && this.game.buildSys.mode;
+      const label = b.isTool ? (count > 0 ? `${b.name} <span style="color:#aef;font-size:0.8em">所持${count}</span>` : b.name) : `${b.name}${count > 0 ? ` <span style="color:#aef;font-size:0.8em">所持×${count}</span>` : ''}`;
       return `<div class="build-item ${isSelected ? 'active' : ''}" data-id="${b.id}" style="opacity:${canAfford || count > 0 ? 1 : 0.5}">
-        <div class="build-name">${b.name}${count > 0 ? ` <span style="color:#aef;font-size:0.8em">所持×${count}</span>` : ''}</div>
+        <div class="build-name">${label}</div>
         <div class="build-cost">${costStr || '無料'}</div>
         <div class="build-desc">${b.description}</div>
       </div>`;
@@ -84,12 +85,17 @@ export class BuildMenu {
     this._listEl.querySelectorAll('.build-item').forEach(el => {
       el.addEventListener('click', () => {
         const id = el.dataset.id;
+        const def = BUILDINGS[id];
         if (this.game.buildSys.craftBuilding(id)) {
-          // Hide menu without calling exitBuildMode (craftBuilding auto-entered it)
-          this._open = false;
-          this._el.style.display = 'none';
+          if (!def?.isTool) {
+            // Building item: hide menu, ghost is active
+            this._open = false;
+            this._el.style.display = 'none';
+          } else {
+            this._render(); // Tool: just refresh count
+          }
         } else {
-          this._render(); // refresh to show current counts
+          this._render();
         }
       });
     });

@@ -36,11 +36,13 @@ export class BackpackUI {
         div.title = def.name || slot.id;
         const isSeed = slot.id.endsWith('_seed');
         const isBuilding = def.isBuildingItem;
-        const isSelected = slot.id === inv._selectedSeedId || slot.id === inv._selectedBuildingId;
+        const isTool = def.isTool;
+        const isSelected = slot.id === inv._selectedSeedId || slot.id === inv._selectedBuildingId || slot.id === inv._selectedToolId;
         if (isSelected) div.classList.add('selected');
         if (isSeed) {
           div.addEventListener('click', () => {
             inv._selectedBuildingId = null;
+            inv._selectedToolId = null;
             this.game.buildSys?.exitBuildMode();
             inv._selectedSeedId = inv._selectedSeedId === slot.id ? null : slot.id;
             const cropId = slot.id.replace('_seed', '');
@@ -48,9 +50,21 @@ export class BackpackUI {
             inv.render();
             this.render();
           });
+        } else if (isTool) {
+          div.addEventListener('click', () => {
+            inv._selectedSeedId = null;
+            inv._selectedBuildingId = null;
+            this.game.farmMode.selectedCrop = null;
+            this.game.buildSys?.exitBuildMode();
+            inv._selectedToolId = inv._selectedToolId === slot.id ? null : slot.id;
+            this.game.showDialog(inv._selectedToolId ? `${def.name}を装備！SPACEで使用` : '道具を外した');
+            inv.render();
+            this.render();
+          });
         } else if (isBuilding) {
           div.addEventListener('click', () => {
             inv._selectedSeedId = null;
+            inv._selectedToolId = null;
             this.game.farmMode.selectedCrop = null;
             if (inv._selectedBuildingId === slot.id) {
               inv._selectedBuildingId = null;

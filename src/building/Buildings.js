@@ -1,4 +1,4 @@
-export const BUILDING_CATEGORIES = ['建物', '家具', '農業'];
+export const BUILDING_CATEGORIES = ['建物', '家具', '農業', '道具'];
 
 export const BUILDINGS = {
   wood_wall: {
@@ -106,5 +106,19 @@ export const BUILDINGS = {
     color: 0x3a2010, solid: false,
     description: '耕した畑',
     hidden: true,
+  },
+
+  // ── 道具 ────────────────────────────────────────────────────────────────
+  axe: {
+    id: 'axe', name: '斧', category: '道具',
+    cost: { wood: 5, stone: 2 },
+    isTool: true,
+    description: '木を切り倒す斧。SPACEで使用。',
+  },
+  pickaxe: {
+    id: 'pickaxe', name: 'つるはし', category: '道具',
+    cost: { wood: 3, stone: 5 },
+    isTool: true,
+    description: '岩を砕くつるはし。SPACEで使用。',
   },
 };

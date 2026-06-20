@@ -18,6 +18,7 @@ import { SaveSystem } from './save/SaveSystem.js';
 import { BackpackUI } from './ui/BackpackUI.js';
 import { ChestUI } from './ui/ChestUI.js';
 import { TILE } from './world/TileTypes.js';
+import { ResourceManager } from './world/Resources.js';
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -159,6 +160,7 @@ async function init() {
       new NPC(scene, 'farmer', '農夫', 0x2D5A27, 30, 34, game.grid),
     ];
 
+    game.resMgr     = new ResourceManager(scene, game.grid, game);
     game.saveSys    = new SaveSystem(game);
     game.backpackUI = new BackpackUI(game);
     game.chestUI    = new ChestUI(game);
@@ -175,6 +177,7 @@ async function init() {
       game.saveSys.load();
     } else {
       placeStarterBuildings();
+      game.resMgr.generate();
     }
 
     // postprocessingは非同期で（失敗してもゲームは動く）
@@ -310,6 +313,7 @@ function handleShortcuts() {
       game.farmMode.selectedCrop = null;
       game.inventory._selectedSeedId = null;
       game.inventory._selectedBuildingId = null;
+      game.inventory._selectedToolId = null;
       game.inventory.render();
     }
   }
@@ -346,6 +350,7 @@ function loop(time) {
   game.enemyMgr.update(delta);
   game.farmMgr.update(delta);
   game.fogOfWar.update(time / 1000);
+  game.resMgr?.update(delta);
   game.buildSys.update(camera);
   for (const npc of game.npcs) npc.update(delta);
   game.hud.update(delta);

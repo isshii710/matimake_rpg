@@ -99,6 +99,13 @@ export class BuildSystem {
     }
 
     this.game.inventory.add(id, 1);
+
+    if (def.isTool) {
+      this.game.showDialog(`${def.name}をクラフト！SPACEで使用`);
+      this.game.inventory.render();
+      return true;
+    }
+
     this.game.showDialog(`${def.name}をクラフト！クリックで設置`);
 
     // Auto-select and enter build mode

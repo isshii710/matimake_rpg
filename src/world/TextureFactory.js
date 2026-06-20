@@ -215,4 +215,43 @@ export function chestTex() {
   return new THREE.CanvasTexture(c);
 }
 
+export function mountainTex() {
+  const c = canvas(128); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#52504a'; ctx.fillRect(0, 0, 128, 128);
+  const r = rng(11);
+  for (let i = 0; i < 180; i++) {
+    const x = r() * 128, y = r() * 128, rad = 1 + r() * 5;
+    const br = 0.6 + r() * 0.5;
+    const v = Math.floor(br * 90);
+    ctx.fillStyle = `rgba(${v},${v-2},${v-4},0.6)`;
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.28); ctx.fill();
+  }
+  // cracks
+  ctx.strokeStyle = 'rgba(20,18,16,0.5)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < 14; i++) {
+    const x = r() * 128, y = r() * 128;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x + (r()-0.5)*20, y + (r()-0.5)*20); ctx.stroke();
+  }
+  return toTex(c);
+}
+
+export function sandTex() {
+  const c = canvas(S); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#c0a850'; ctx.fillRect(0, 0, S, S);
+  const r = rng(12);
+  for (let i = 0; i < 300; i++) {
+    const x = r() * S, y = r() * S;
+    ctx.fillStyle = r() < 0.5 ? 'rgba(180,150,60,0.4)' : 'rgba(220,190,90,0.3)';
+    ctx.fillRect(x, y, 1 + r() * 2, 1);
+  }
+  // pebbles
+  for (let i = 0; i < 12; i++) {
+    const x = r() * S, y = r() * S;
+    ctx.fillStyle = 'rgba(160,130,80,0.5)';
+    ctx.beginPath(); ctx.arc(x, y, 0.5 + r() * 1.5, 0, 6.28); ctx.fill();
+  }
+  return toTex(c);
+}
+
 // Campfire / lantern use emissive, no texture needed

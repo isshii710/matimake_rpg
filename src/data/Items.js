@@ -12,6 +12,10 @@ export const ITEMS = {
   herb_seed:    { id: 'herb_seed',    name: 'ハーブの種', icon: '🌱', stackable: true,  maxStack: 99 },
   water_bucket: { id: 'water_bucket', name: '水バケツ',   icon: '🪣', stackable: true,  maxStack: 5  },
 
+  // ── 道具 ────────────────────────────────────────────────────────────────
+  axe:     { id: 'axe',     name: '斧',       icon: '🪓', stackable: false, maxStack: 1, isTool: true, toolType: 'axe' },
+  pickaxe: { id: 'pickaxe', name: 'つるはし', icon: '⛏️',  stackable: false, maxStack: 1, isTool: true, toolType: 'pickaxe' },
+
   // ── 建築アイテム（クラフトしてインベントリに入る） ──────────────────────
   wood_wall:   { id: 'wood_wall',   name: '木の壁',   icon: '🧱', stackable: true, maxStack: 20, isBuildingItem: true },
   stone_wall:  { id: 'stone_wall',  name: '石の壁',   icon: '🪨', stackable: true, maxStack: 20, isBuildingItem: true },

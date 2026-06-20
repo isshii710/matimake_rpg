@@ -1,11 +1,27 @@
 import * as THREE from 'three';
 import { TILE, TILE_COLOR, TILE_Y, TILE_WALKABLE } from './TileTypes.js';
+import { grassTex, dirtTex, stoneTex, waterTex, tilledTex, dangerGrassTex } from './TextureFactory.js';
 
 export const GRID_SIZE = 64;
 export const TILE_SIZE = 1;
 const TILE_THICKNESS = 0.15;
 const SAFE_RADIUS = 8;     // inner village
 const BUFFER_RADIUS = 16;  // edge of well-lit zone
+
+const TILE_TEX = {};
+function getTileTex(type) {
+  if (TILE_TEX[type]) return TILE_TEX[type];
+  switch (Number(type)) {
+    case TILE.GRASS:        TILE_TEX[type] = grassTex();       break;
+    case TILE.DIRT:         TILE_TEX[type] = dirtTex();        break;
+    case TILE.STONE:        TILE_TEX[type] = stoneTex();       break;
+    case TILE.WATER:        TILE_TEX[type] = waterTex();       break;
+    case TILE.TILLED:       TILE_TEX[type] = tilledTex();      break;
+    case TILE.DANGER_GRASS: TILE_TEX[type] = dangerGrassTex(); break;
+    default:                TILE_TEX[type] = null;
+  }
+  return TILE_TEX[type];
+}
 
 export class Grid {
   constructor(scene) {
@@ -79,7 +95,11 @@ export class Grid {
     const geo = new THREE.BoxGeometry(TILE_SIZE - 0.02, TILE_THICKNESS, TILE_SIZE - 0.02);
 
     for (const [type, count] of Object.entries(this._typeCounts)) {
-      const mat = new THREE.MeshLambertMaterial({ color: TILE_COLOR[type] });
+      const tex = getTileTex(type);
+      const mat = new THREE.MeshLambertMaterial({
+        color: tex ? 0xffffff : TILE_COLOR[type],
+        map: tex || null,
+      });
       const im = new THREE.InstancedMesh(geo, mat, count);
       im.receiveShadow = true;
       im.userData.tileType = Number(type);

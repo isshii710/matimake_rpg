@@ -49,13 +49,13 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = !isMobile;
-renderer.toneMapping = THREE.ReinhardToneMapping;
-renderer.toneMappingExposure = 1.3;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.6;
 
 // ─── Scene ─────────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x060302);
-scene.fog = new THREE.FogExp2(0x060302, isMobile ? 0.012 : 0.016);
+scene.background = new THREE.Color(0x0e0806);
+scene.fog = new THREE.FogExp2(0x100806, isMobile ? 0.010 : 0.013);
 
 // ─── Camera ────────────────────────────────────────────────────────────────
 const camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -71,8 +71,8 @@ async function setupPostProcessing() {
     const c = new pp.EffectComposer(renderer);
     c.addPass(new pp.RenderPass(scene, camera));
     c.addPass(new pp.EffectPass(camera,
-      new pp.BloomEffect({ intensity: 1.5, radius: 0.85, luminanceThreshold: 0.2, luminanceSmoothing: 0.03 }),
-      new pp.VignetteEffect({ darkness: 0.7, offset: 0.32 }),
+      new pp.BloomEffect({ intensity: 2.2, radius: 0.90, luminanceThreshold: 0.15, luminanceSmoothing: 0.05 }),
+      new pp.VignetteEffect({ darkness: 0.80, offset: 0.28 }),
     ));
     return c;
   } catch (e) {
@@ -83,24 +83,39 @@ async function setupPostProcessing() {
 
 // ─── Lighting ──────────────────────────────────────────────────────────────
 function setupLighting() {
-  scene.add(new THREE.AmbientLight(0x553322, 0.6));
-  scene.add(new THREE.HemisphereLight(0x4466aa, 0xcc8833, 0.45));
+  // Warm ambient (dark night-village feel)
+  scene.add(new THREE.AmbientLight(0x3a2210, 0.55));
+  // Hemisphere: warm sky vs warm-brown ground
+  scene.add(new THREE.HemisphereLight(0x5566aa, 0xcc8822, 0.50));
 
-  const sun = new THREE.DirectionalLight(0xff9966, 0.9);
-  sun.position.set(-12, 22, -8);
+  // Main sun – golden-hour from upper-left
+  const sun = new THREE.DirectionalLight(0xffbb66, 1.35);
+  sun.position.set(-15, 28, -10);
   if (!isMobile) {
     sun.castShadow = true;
-    sun.shadow.mapSize.set(512, 512);
-    Object.assign(sun.shadow.camera, { near: 0.5, far: 80, left: -30, right: 30, top: 30, bottom: -30 });
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, { near: 0.5, far: 100, left: -35, right: 35, top: 35, bottom: -35 });
+    sun.shadow.bias = -0.0005;
   }
   scene.add(sun);
 
-  // モバイルは少なめの点光源
+  // Soft fill from the opposite side
+  const fill = new THREE.DirectionalLight(0x6688bb, 0.30);
+  fill.position.set(12, 10, 8);
+  scene.add(fill);
+
+  // Warm point lights scattered around village
   const pts = isMobile
-    ? [[0,2,0],[5,2,3],[-5,2,-5]]
-    : [[0,2,0],[5,2,3],[-5,2,3],[4,2,-5],[-4,2,-5],[7,2,0],[-7,2,0],[0,2,7]];
-  for (const [x, y, z] of pts) {
-    const pl = new THREE.PointLight(0xff9944, 1.8, 11);
+    ? [[0,1.8,0,0xff8833,2.2,10],[5,1.8,3,0xffaa44,1.8,9],[-5,1.8,-4,0xff9933,1.8,9]]
+    : [
+        [0,1.8,0,0xff8833,2.4,12],[5,1.8,3,0xffaa44,2.0,10],
+        [-5,1.8,3,0xff9933,2.0,10],[4,1.8,-5,0xffcc55,1.8,9],
+        [-4,1.8,-5,0xffaa33,1.8,9],[7,1.8,0,0xff9944,1.6,8],
+        [-7,1.8,0,0xff8822,1.6,8],[0,1.8,7,0xffbb44,1.8,9],
+        [3,1.8,-2,0xff7733,1.4,7],[-3,1.8,2,0xffaa55,1.4,7],
+      ];
+  for (const [x, y, z, col, intensity, dist] of pts) {
+    const pl = new THREE.PointLight(col, intensity, dist);
     pl.position.set(x, y, z);
     scene.add(pl);
   }

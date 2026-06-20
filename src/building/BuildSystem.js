@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BUILDINGS } from './Buildings.js';
+import { woodTex, stoneWallTex, roofTex, chestTex } from '../world/TextureFactory.js';
 
 // Building layer: 0=ground(floor/furniture), 1=wall, 2=roof
 const LAYER = {
@@ -256,11 +257,22 @@ export class BuildSystem {
     const geo = def.isRoof
       ? new THREE.ConeGeometry(0.72, def.h, 4)
       : new THREE.BoxGeometry(def.w, def.h, def.d);
+    const tex = this._texFor(def);
     return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
-      color: def.color,
+      color: tex ? 0xffffff : def.color,
+      map: tex,
       emissive: def.emissive || 0x000000,
       emissiveIntensity: def.emissiveIntensity || 0,
     }));
+  }
+
+  _texFor(def) {
+    if (def.isRoof) return roofTex();
+    if (def.isChest) return chestTex();
+    if (def.id === 'wood_wall' || def.id === 'wood_floor' || def.id === 'door') return woodTex(def.color);
+    if (def.id === 'stone_wall' || def.id === 'stone_floor') return stoneWallTex();
+    if (def.id === 'table' || def.id === 'bed') return woodTex(def.color);
+    return null;
   }
 
   _updateGhost() {

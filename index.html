@@ -15,6 +15,41 @@
   }
   </script>
 
+  <!-- 早期エラーハンドラ: モジュール読み込み前に動く素のスクリプト。
+       three などのCDN読み込みが失敗してもロード画面を固まらせず、
+       画面に実際のエラーを表示する（iPhoneでの原因特定用）。 -->
+  <script>
+    (function () {
+      function showErr(msg) {
+        var loading = document.getElementById('loading');
+        var err = document.getElementById('load-error');
+        var sub = document.querySelector('#loading .load-sub');
+        if (sub) sub.textContent = '';
+        if (err) {
+          err.style.display = 'block';
+          var detail = document.getElementById('err-detail');
+          if (detail) detail.textContent = String(msg).slice(0, 300);
+        }
+        if (loading) loading.style.opacity = '1';
+      }
+      window.addEventListener('error', function (e) {
+        // リソース読み込み失敗(<script>/<link>)も message が無い場合がある
+        var m = e.message || (e.target && e.target.src ? ('読み込み失敗: ' + e.target.src) : 'スクリプトエラー');
+        showErr(m);
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) {
+        showErr((e.reason && (e.reason.message || e.reason)) || 'Promiseエラー');
+      });
+      // 12秒たってもゲーム開始フラグが立たなければCDN等を疑う
+      window.__GAME_STARTED__ = false;
+      setTimeout(function () {
+        if (!window.__GAME_STARTED__) {
+          showErr('読み込みがタイムアウトしました（ネットワーク/CDNを確認）');
+        }
+      }, 12000);
+    })();
+  </script>
+
   <style>
     /* ── Reset & base ───────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -658,7 +693,7 @@
   <h1>はじまりの集落</h1>
   <div class="load-bar-bg"><div class="load-bar"></div></div>
   <div class="load-sub">ロード中...</div>
-  <div id="load-error">読み込みに失敗しました。<br>ページを再読み込みしてください。<br><br><button onclick="location.reload()" style="background:#3d2a0a;border:1px solid #d4a540;color:#d4a540;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:14px;">再読み込み</button></div>
+  <div id="load-error">読み込みに失敗しました。<br>ページを再読み込みしてください。<br><div id="err-detail" style="margin-top:8px;color:#ffaa88;font-size:11px;word-break:break-all;"></div><br><button onclick="location.reload()" style="background:#3d2a0a;border:1px solid #d4a540;color:#d4a540;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:14px;">再読み込み</button></div>
 </div>
 
 <!-- Three.js canvas -->

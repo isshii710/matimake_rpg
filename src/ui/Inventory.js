@@ -9,6 +9,7 @@ export class Inventory {
 
     this._el = document.getElementById('inventory');
     this._selectedSeedId = null;
+    this._selectedBuildingId = null;
 
     // Start with some basic resources
     this.add('wood', 10);
@@ -44,7 +45,13 @@ export class Inventory {
     const idx = this.slots.findIndex(s => s.id === itemId);
     if (idx === -1) return false;
     this.slots[idx].count -= count;
-    if (this.slots[idx].count <= 0) this.slots.splice(idx, 1);
+    if (this.slots[idx].count <= 0) {
+      this.slots.splice(idx, 1);
+      if (this._selectedBuildingId === itemId) {
+        this._selectedBuildingId = null;
+        this.game.buildSys?.exitBuildMode();
+      }
+    }
     this.render();
     return true;
   }
@@ -69,8 +76,7 @@ export class Inventory {
 
     this._el.innerHTML = display.map((slot, i) => {
       const def = ITEMS[slot.id] || {};
-      const isSeed = slot.id.endsWith('_seed');
-      const isSelected = slot.id === this._selectedSeedId;
+      const isSelected = slot.id === this._selectedSeedId || slot.id === this._selectedBuildingId;
       return `<div class="inv-slot ${isSelected ? 'selected' : ''}" data-idx="${i}" title="${def.name || slot.id}">
         <span class="inv-icon">${def.icon || '?'}</span>
         <span class="inv-count">${slot.count}</span>
@@ -88,14 +94,30 @@ export class Inventory {
         const idx = parseInt(el.dataset.idx);
         const slot = this.slots[idx];
         if (!slot) return;
+        const def = ITEMS[slot.id] || {};
+
         if (slot.id.endsWith('_seed')) {
+          this._selectedBuildingId = null;
+          this.game.buildSys?.exitBuildMode();
           this._selectedSeedId = this._selectedSeedId === slot.id ? null : slot.id;
           const cropId = slot.id.replace('_seed', '');
           this.game.farmMode.selectedCrop = this._selectedSeedId ? cropId : null;
           this.render();
           if (this._selectedSeedId) {
-            this.game.showDialog(`${ITEMS[slot.id]?.name || slot.id}を選択。畑をクリックして植えよう！`);
+            this.game.showDialog(`${def.name || slot.id}を選択。畑をクリックして植えよう！`);
           }
+        } else if (def.isBuildingItem) {
+          this._selectedSeedId = null;
+          this.game.farmMode.selectedCrop = null;
+          if (this._selectedBuildingId === slot.id) {
+            this._selectedBuildingId = null;
+            this.game.buildSys?.exitBuildMode();
+          } else {
+            this._selectedBuildingId = slot.id;
+            this.game.buildSys?.enterBuildMode(slot.id);
+            this.game.showDialog(`${def.name}を選択。クリックで設置！`);
+          }
+          this.render();
         }
       });
     });

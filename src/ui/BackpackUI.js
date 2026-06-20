@@ -35,13 +35,31 @@ export class BackpackUI {
         div.innerHTML = `<span class="inv-icon">${def.icon || '?'}</span><span class="inv-count">${slot.count}</span>`;
         div.title = def.name || slot.id;
         const isSeed = slot.id.endsWith('_seed');
-        const isSelected = slot.id === inv._selectedSeedId;
+        const isBuilding = def.isBuildingItem;
+        const isSelected = slot.id === inv._selectedSeedId || slot.id === inv._selectedBuildingId;
         if (isSelected) div.classList.add('selected');
         if (isSeed) {
           div.addEventListener('click', () => {
+            inv._selectedBuildingId = null;
+            this.game.buildSys?.exitBuildMode();
             inv._selectedSeedId = inv._selectedSeedId === slot.id ? null : slot.id;
             const cropId = slot.id.replace('_seed', '');
             this.game.farmMode.selectedCrop = inv._selectedSeedId ? cropId : null;
+            inv.render();
+            this.render();
+          });
+        } else if (isBuilding) {
+          div.addEventListener('click', () => {
+            inv._selectedSeedId = null;
+            this.game.farmMode.selectedCrop = null;
+            if (inv._selectedBuildingId === slot.id) {
+              inv._selectedBuildingId = null;
+              this.game.buildSys?.exitBuildMode();
+            } else {
+              inv._selectedBuildingId = slot.id;
+              this.game.buildSys?.enterBuildMode(slot.id);
+              this.game.showDialog(`${def.name}を選択。クリックで設置！`);
+            }
             inv.render();
             this.render();
           });

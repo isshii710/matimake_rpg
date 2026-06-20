@@ -230,7 +230,7 @@ function onCanvasClick(e) {
   const { gx, gz } = game.grid.worldToGrid(pt.x, pt.z);
 
   if (game.buildSys.demolishMode) { game.buildSys.demolish(gx, gz); return; }
-  if (game.buildSys.mode) { game.buildSys.place(gx, gz); return; }
+  if (game.buildSys.mode) { game.buildSys.place(game.buildSys._ghostGx, game.buildSys._ghostGz); return; }
 
   const plot = game.farmMgr.getPlot(gx, gz);
   if (plot) {

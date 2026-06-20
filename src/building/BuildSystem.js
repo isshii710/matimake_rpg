@@ -8,12 +8,14 @@ const LAYER = {
   wood_floor: 0, stone_floor: 0,
   campfire: 0, lantern: 0, table: 0, bed: 0, well: 0, farm_plot: 0, chest: 0,
   wood_wall: 1, stone_wall: 1, door: 1,
-  roof: 2,
+  roof: 2, flat_roof: 2,
 };
 const WALL_IDS = new Set(['wood_wall', 'stone_wall', 'door']);
 const WALL_H = 1.5; // must match Buildings.js wall height
+const MAX_WALL_FLOOR = 3; // 4 floors total (0-3)
 
 function lkey(gx, gz, layer) { return `${gx},${gz}:${layer}`; }
+function wkey(gx, gz, floor) { return floor === 0 ? `${gx},${gz}:1` : `${gx},${gz}:1:${floor}`; }
 function getLayer(id) { return LAYER[id] ?? 0; }
 
 export class BuildSystem {
@@ -106,6 +108,22 @@ export class BuildSystem {
     return true;
   }
 
+  // ── Wall floor helpers ────────────────────────────────────────────────────
+
+  _getMaxWallFloor(gx, gz) {
+    for (let f = MAX_WALL_FLOOR; f >= 0; f--) {
+      if (this._buildings.has(wkey(gx, gz, f))) return f;
+    }
+    return -1;
+  }
+
+  _getNextWallFloor(gx, gz) {
+    for (let f = 0; f <= MAX_WALL_FLOOR; f++) {
+      if (!this._buildings.has(wkey(gx, gz, f))) return f;
+    }
+    return -1; // all floors full
+  }
+
   // ── Place ─────────────────────────────────────────────────────────────────
 
   place(gx, gz) {
@@ -123,15 +141,40 @@ export class BuildSystem {
     }
 
     const layer = getLayer(buildingId);
-    const key = lkey(gx, gz, layer);
+    let key, wallFloor = 0, yPos;
 
-    if (this._buildings.has(key)) {
-      this.game.showDialog('ここにはすでにある！');
-      return false;
-    }
-    if (layer !== 2 && !this.grid.isWalkable(gx, gz)) {
-      this.game.showDialog('ここには建てられない！');
-      return false;
+    if (WALL_IDS.has(buildingId)) {
+      wallFloor = this._getNextWallFloor(gx, gz);
+      if (wallFloor === -1) {
+        this.game.showDialog('これ以上積めない！（最大4階）');
+        return false;
+      }
+      if (wallFloor === 0 && !this.grid.isWalkable(gx, gz)) {
+        this.game.showDialog('ここには建てられない！');
+        return false;
+      }
+      key = wkey(gx, gz, wallFloor);
+      yPos = 0.075 + def.h / 2 + WALL_H * wallFloor;
+    } else if (layer === 2) {
+      key = lkey(gx, gz, layer);
+      if (this._buildings.has(key)) {
+        this.game.showDialog('ここにはすでに屋根がある！');
+        return false;
+      }
+      const maxWall = this._getMaxWallFloor(gx, gz);
+      const wallCount = maxWall >= 0 ? maxWall + 1 : 1;
+      yPos = WALL_H * wallCount + 0.15 + def.h / 2;
+    } else {
+      key = lkey(gx, gz, layer);
+      if (this._buildings.has(key)) {
+        this.game.showDialog('ここにはすでにある！');
+        return false;
+      }
+      if (!this.grid.isWalkable(gx, gz)) {
+        this.game.showDialog('ここには建てられない！');
+        return false;
+      }
+      yPos = this._yFor(buildingId, def);
     }
 
     if (isBuildingItem) {
@@ -150,7 +193,7 @@ export class BuildSystem {
 
     const mesh = this._createMesh(def);
     const { wx, wz } = this.grid.gridToWorld(gx, gz);
-    mesh.position.set(wx, this._yFor(buildingId, def), wz);
+    mesh.position.set(wx, yPos, wz);
     mesh.rotation.y = this._rotation * Math.PI / 2;
     if (layer === 2) {
       mesh.material.transparent = true;
@@ -165,7 +208,7 @@ export class BuildSystem {
       this.scene.add(light);
     }
 
-    this._buildings.set(key, { id: buildingId, mesh, light, def, gx, gz, layer, rotation: this._rotation });
+    this._buildings.set(key, { id: buildingId, mesh, light, def, gx, gz, layer, wallFloor, rotation: this._rotation });
     if (def.solid) this._solidCells.add(`${gx},${gz}`);
 
     if (WALL_IDS.has(buildingId)) this._rebuildCornerPosts();
@@ -180,9 +223,9 @@ export class BuildSystem {
   // ── Demolish ──────────────────────────────────────────────────────────────
 
   demolish(gx, gz) {
-    // Try layers in priority order: wall → ground → roof
-    for (const layer of [1, 0, 2]) {
-      const key = lkey(gx, gz, layer);
+    // Try wall floors top-down first (remove topmost wall first)
+    for (let f = MAX_WALL_FLOOR; f >= 0; f--) {
+      const key = wkey(gx, gz, f);
       const b = this._buildings.get(key);
       if (!b) continue;
 
@@ -195,12 +238,31 @@ export class BuildSystem {
       }
       this._buildings.delete(key);
 
-      // Only remove solid if no wall remains in this cell
-      if (!this._buildings.has(lkey(gx, gz, 1))) {
+      if (this._getMaxWallFloor(gx, gz) === -1) {
         this._solidCells.delete(`${gx},${gz}`);
       }
 
-      if (WALL_IDS.has(b.id)) this._rebuildCornerPosts();
+      this._rebuildCornerPosts();
+      this.game.showDialog('撤去完了！素材を50%回収。');
+      return true;
+    }
+
+    // Then ground and roof layers
+    for (const layer of [0, 2]) {
+      const key = lkey(gx, gz, layer);
+      const b = this._buildings.get(key);
+      if (!b) continue;
+
+      this.scene.remove(b.mesh);
+      b.mesh.geometry.dispose();
+      if (b.light) this.scene.remove(b.light);
+
+      for (const [item, count] of Object.entries(b.def.cost)) {
+        this.game.inventory.add(item, Math.floor(count * 0.5));
+      }
+      this._buildings.delete(key);
+      this._solidCells.delete(`${gx},${gz}`);
+
       this.game.showDialog('撤去完了！素材を50%回収。');
       return true;
     }
@@ -214,7 +276,13 @@ export class BuildSystem {
   isSolid(gx, gz) { return this._solidCells.has(`${gx},${gz}`); }
 
   getBuilding(gx, gz) {
-    for (const layer of [1, 0, 2]) {
+    // Check wall floors top-down
+    for (let f = MAX_WALL_FLOOR; f >= 0; f--) {
+      const b = this._buildings.get(wkey(gx, gz, f));
+      if (b) return b;
+    }
+    // Then ground and roof
+    for (const layer of [0, 2]) {
       const b = this._buildings.get(lkey(gx, gz, layer));
       if (b) return b;
     }
@@ -237,15 +305,26 @@ export class BuildSystem {
   }
 
   // Place building without resource deduction (used by save system)
-  placeFromSave(id, gx, gz, layer, rotation = 0) {
+  placeFromSave(id, gx, gz, layer, rotation = 0, wallFloor = 0) {
     const def = BUILDINGS[id];
     if (!def) return false;
-    const key = lkey(gx, gz, layer);
+    const key = WALL_IDS.has(id) ? wkey(gx, gz, wallFloor) : lkey(gx, gz, layer);
     if (this._buildings.has(key)) return false;
+
+    let yPos;
+    if (WALL_IDS.has(id)) {
+      yPos = 0.075 + def.h / 2 + WALL_H * wallFloor;
+    } else if (layer === 2) {
+      const maxWall = this._getMaxWallFloor(gx, gz);
+      const wallCount = maxWall >= 0 ? maxWall + 1 : 1;
+      yPos = WALL_H * wallCount + 0.15 + def.h / 2;
+    } else {
+      yPos = this._yFor(id, def);
+    }
 
     const mesh = this._createMesh(def);
     const { wx, wz } = this.grid.gridToWorld(gx, gz);
-    mesh.position.set(wx, this._yFor(id, def), wz);
+    mesh.position.set(wx, yPos, wz);
     mesh.rotation.y = rotation * Math.PI / 2;
     if (layer === 2) { mesh.material.transparent = true; mesh.material.opacity = 1.0; }
     this.scene.add(mesh);
@@ -256,7 +335,7 @@ export class BuildSystem {
       light.position.set(wx, 1.5, wz);
       this.scene.add(light);
     }
-    this._buildings.set(key, { id, mesh, light, def, gx, gz, layer, rotation });
+    this._buildings.set(key, { id, mesh, light, def, gx, gz, layer, wallFloor, rotation });
     if (def.solid) this._solidCells.add(`${gx},${gz}`);
     if (WALL_IDS.has(id)) this._rebuildCornerPosts();
     return true;
@@ -276,34 +355,51 @@ export class BuildSystem {
     }
 
     if (!this.mode || !this._ghost) return;
-    this._raycaster.setFromCamera(this._pointer, camera);
-    const pt = new THREE.Vector3();
-    if (this._raycaster.ray.intersectPlane(this._groundPlane, pt)) {
-      const { gx, gz } = this.grid.worldToGrid(pt.x, pt.z);
-      const { wx, wz } = this.grid.gridToWorld(gx, gz);
-      const def = BUILDINGS[this.selectedId];
-      const layer = getLayer(this.selectedId);
 
-      // Auto-rotate walls based on which axis the cursor is nearer to
-      let rotChanged = false;
+    const player = this.game.player;
+    if (!player) return;
+    const fd = player._facingDir;
+    const { gx: pgx, gz: pgz } = this.grid.worldToGrid(player.position.x, player.position.z);
+    const gx = pgx + Math.round(fd.x);
+    const gz = pgz + Math.round(fd.z);
+    const { wx, wz } = this.grid.gridToWorld(gx, gz);
+    const def = BUILDINGS[this.selectedId];
+    const layer = getLayer(this.selectedId);
+
+    // Auto-rotate walls based on facing direction
+    let rotChanged = false;
+    if (WALL_IDS.has(this.selectedId)) {
+      const newRot = Math.abs(fd.x) > Math.abs(fd.z) ? 1 : 0;
+      if (newRot !== this._rotation) {
+        this._rotation = newRot;
+        this._ghost.rotation.y = this._rotation * Math.PI / 2;
+        rotChanged = true;
+      }
+    }
+
+    if (gx !== this._ghostGx || gz !== this._ghostGz || rotChanged) {
+      this._ghostGx = gx;
+      this._ghostGz = gz;
+
+      let yPos, canPlace;
       if (WALL_IDS.has(this.selectedId)) {
-        const newRot = Math.abs(pt.x - wx) > Math.abs(pt.z - wz) ? 1 : 0;
-        if (newRot !== this._rotation) {
-          this._rotation = newRot;
-          this._ghost.rotation.y = this._rotation * Math.PI / 2;
-          rotChanged = true;
-        }
+        const nextFloor = this._getNextWallFloor(gx, gz);
+        const ghostFloor = nextFloor === -1 ? MAX_WALL_FLOOR : nextFloor;
+        yPos = 0.075 + def.h / 2 + WALL_H * ghostFloor;
+        canPlace = nextFloor !== -1 && this.grid.isWalkable(gx, gz);
+      } else if (layer === 2) {
+        const maxWall = this._getMaxWallFloor(gx, gz);
+        const wallCount = maxWall >= 0 ? maxWall + 1 : 1;
+        yPos = WALL_H * wallCount + 0.15 + def.h / 2;
+        canPlace = !this._buildings.has(lkey(gx, gz, layer));
+      } else {
+        yPos = this._yFor(this.selectedId, def);
+        canPlace = this.grid.isWalkable(gx, gz) && !this._buildings.has(lkey(gx, gz, layer));
       }
 
-      if (gx !== this._ghostGx || gz !== this._ghostGz || rotChanged) {
-        this._ghostGx = gx;
-        this._ghostGz = gz;
-        this._ghost.position.set(wx, this._yFor(this.selectedId, def), wz);
-        const canPlace = (layer === 2 || this.grid.isWalkable(gx, gz))
-          && !this._buildings.has(lkey(gx, gz, layer));
-        this._ghost.material.color.setHex(canPlace ? 0x88ff88 : 0xff4444);
-        this._ghost.material.opacity = canPlace ? 0.5 : 0.4;
-      }
+      this._ghost.position.set(wx, yPos, wz);
+      this._ghost.material.color.setHex(canPlace ? 0x88ff88 : 0xff4444);
+      this._ghost.material.opacity = canPlace ? 0.5 : 0.4;
     }
   }
 
@@ -316,29 +412,44 @@ export class BuildSystem {
     }
     this._cornerPosts.clear();
 
-    const postGeo = new THREE.BoxGeometry(0.28, WALL_H, 0.28);
     for (const [, b] of this._buildings) {
       if (!WALL_IDS.has(b.id)) continue;
       const bRot = b.rotation % 2;
       const { wx: bx, wz: bz } = this.grid.gridToWorld(b.gx, b.gz);
 
       for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nb = this._buildings.get(lkey(b.gx + dx, b.gz + dz, 1));
-        if (!nb || !WALL_IDS.has(nb.id)) continue;
-        if (nb.rotation % 2 === bRot) continue; // parallel – no corner
+        const ngx = b.gx + dx, ngz = b.gz + dz;
+        // Find any perpendicular wall neighbor at any floor
+        let perpDef = null;
+        for (let f = 0; f <= MAX_WALL_FLOOR; f++) {
+          const nb = this._buildings.get(wkey(ngx, ngz, f));
+          if (nb && WALL_IDS.has(nb.id) && nb.rotation % 2 !== bRot) {
+            perpDef = nb.def;
+            break;
+          }
+        }
+        if (!perpDef) continue;
 
-        const { wx: nx, wz: nz } = this.grid.gridToWorld(nb.gx, nb.gz);
+        const { wx: nx, wz: nz } = this.grid.gridToWorld(ngx, ngz);
         const px = (bx + nx) / 2;
         const pz = (bz + nz) / 2;
         const pKey = `${px.toFixed(3)},${pz.toFixed(3)}`;
         if (this._cornerPosts.has(pKey)) continue;
 
+        // Post height covers the tallest wall stack at either cell
+        const maxFloor = Math.max(
+          this._getMaxWallFloor(b.gx, b.gz),
+          this._getMaxWallFloor(ngx, ngz)
+        );
+        const postH = WALL_H * (maxFloor + 1);
+
+        const postGeo = new THREE.BoxGeometry(0.28, postH, 0.28);
         const postMat = new THREE.MeshLambertMaterial({
           color: b.def.color,
           map: this._texFor(b.def),
         });
         const post = new THREE.Mesh(postGeo, postMat);
-        post.position.set(px, 0.075 + WALL_H / 2, pz);
+        post.position.set(px, 0.075 + postH / 2, pz);
         this.scene.add(post);
         this._cornerPosts.set(pKey, post);
       }

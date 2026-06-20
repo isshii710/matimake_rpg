@@ -18,6 +18,7 @@ export const ITEMS = {
   wood_floor:  { id: 'wood_floor',  name: '木の床',   icon: '🟤', stackable: true, maxStack: 20, isBuildingItem: true },
   stone_floor: { id: 'stone_floor', name: '石畳',     icon: '⬜', stackable: true, maxStack: 20, isBuildingItem: true },
   roof:        { id: 'roof',        name: '三角屋根', icon: '🔺', stackable: true, maxStack: 20, isBuildingItem: true },
+  flat_roof:   { id: 'flat_roof',   name: '平らな屋根板', icon: '🟦', stackable: true, maxStack: 20, isBuildingItem: true },
   door:        { id: 'door',        name: 'ドア',     icon: '🚪', stackable: true, maxStack: 20, isBuildingItem: true },
   campfire:    { id: 'campfire',    name: '焚き火',   icon: '🔥', stackable: true, maxStack: 10, isBuildingItem: true },
   lantern:     { id: 'lantern',     name: 'ランタン', icon: '🏮', stackable: true, maxStack: 10, isBuildingItem: true },

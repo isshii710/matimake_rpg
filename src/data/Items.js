@@ -1,4 +1,5 @@
 export const ITEMS = {
+  gold:         { id: 'gold',         name: 'ゴールド',   icon: '🪙', stackable: true,  maxStack: 9999 },
   wood:         { id: 'wood',         name: '木材',       icon: '🪵', stackable: true,  maxStack: 99 },
   stone:        { id: 'stone',        name: '石材',       icon: '🪨', stackable: true,  maxStack: 99 },
   iron:         { id: 'iron',         name: '鉄くず',     icon: '⚙️',  stackable: true,  maxStack: 99 },

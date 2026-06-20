@@ -10,6 +10,7 @@ export class HUD {
     this._dialogTimer = 0;
     this._modeLabel = document.getElementById('mode-label');
     this._damageFlash = document.getElementById('damage-flash');
+    this._mpBar = document.getElementById('mp-fill');
   }
 
   flashDamage() {
@@ -34,6 +35,12 @@ export class HUD {
     // Stamina bar
     const stPct = (p.stamina / p.maxStamina) * 100;
     if (this._staminaBar) this._staminaBar.style.width = stPct + '%';
+
+    // MP bar
+    const mag = this.game.magicSys;
+    if (mag && this._mpBar) {
+      this._mpBar.style.width = ((mag.mp / mag.maxMp) * 100) + '%';
+    }
 
     // Day/season
     if (this._dayLabel) this._dayLabel.textContent = this.game.season.getLabel();

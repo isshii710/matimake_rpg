@@ -161,6 +161,7 @@
       transition: width 0.3s, background 0.3s;
     }
     .bar-fill.stamina { background: linear-gradient(90deg, #2255cc, #4488ff); }
+    .bar-fill.mp      { background: linear-gradient(90deg, #6622aa, #aa44ff); }
     #hp-text { font-size: 10px; color: #a0c080; width: 52px; text-align: right; flex-shrink: 0; }
 
     /* ── Build panel (top-center) ───────────────────────────── */
@@ -656,6 +657,11 @@
       <span class="stat-label">ST</span>
       <div class="bar-bg"><div id="stamina-fill" class="bar-fill stamina" style="width:100%"></div></div>
     </div>
+    <div class="stat-row">
+      <span class="stat-label">MP</span>
+      <div class="bar-bg"><div id="mp-fill" class="bar-fill mp" style="width:100%"></div></div>
+    </div>
+    <div style="font-size:10px;color:#8080cc;margin-top:4px;text-align:right;">1🔥 2💚 3⚡</div>
   </div>
 
   <!-- Build menu -->
@@ -687,8 +693,9 @@
   <!-- Controls hint (desktop) -->
   <div id="controls-hint">
     WASD / ↑↓←→ : 移動<br>
-    Space : 攻撃<br>
-    E : 調べる / 水汲み / 収穫 / チェスト<br>
+    Space : 攻撃 / ツール使用<br>
+    1🔥 2💚 3⚡ : 魔法<br>
+    E : 調べる / 水汲み / 収穫<br>
     B : 建設メニュー<br>
     I : バッグ（全アイテム）<br>
     S : セーブ<br>

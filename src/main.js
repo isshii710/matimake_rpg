@@ -19,6 +19,9 @@ import { BackpackUI } from './ui/BackpackUI.js';
 import { ChestUI } from './ui/ChestUI.js';
 import { TILE } from './world/TileTypes.js';
 import { ResourceManager } from './world/Resources.js';
+import { MagicSystem } from './magic/MagicSystem.js';
+import { ShopManager } from './ui/ShopUI.js';
+import { buildWorld, registerShops } from './world/WorldBuilder.js';
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -161,9 +164,11 @@ async function init() {
     ];
 
     game.resMgr     = new ResourceManager(scene, game.grid, game);
+    game.magicSys   = new MagicSystem(scene, game);
     game.saveSys    = new SaveSystem(game);
     game.backpackUI = new BackpackUI(game);
     game.chestUI    = new ChestUI(game);
+    game.shopMgr    = new ShopManager(game);
 
     document.getElementById('save-btn')?.addEventListener('click', () => game.saveSys.save());
     document.getElementById('bag-btn')?.addEventListener('click', () => {
@@ -175,8 +180,10 @@ async function init() {
     const hadSave = game.saveSys.hasSave();
     if (hadSave) {
       game.saveSys.load();
+      registerShops(game); // re-register shop locations without re-placing buildings
     } else {
       placeStarterBuildings();
+      buildWorld(game);
       game.resMgr.generate();
     }
 
@@ -211,6 +218,7 @@ function placeStarterBuildings() {
   game.inventory.add('stone', 7);
   game.inventory.add('iron', 3);
   game.inventory.add('cloth', 2);
+  game.inventory.add('gold', 150); // starting gold for shops
 }
 
 // ─── Camera follow ─────────────────────────────────────────────────────────
@@ -289,6 +297,9 @@ function onCanvasClick(e) {
 
 // ─── Shortcuts ─────────────────────────────────────────────────────────────
 function handleShortcuts() {
+  if (keys['Digit1'] && !prevKeys['Digit1']) game.magicSys?.cast('fireball');
+  if (keys['Digit2'] && !prevKeys['Digit2']) game.magicSys?.cast('heal');
+  if (keys['Digit3'] && !prevKeys['Digit3']) game.magicSys?.cast('thunder');
   if (keys['KeyB'] && !prevKeys['KeyB']) game.buildMenu.toggle();
   if (keys['KeyE'] && !prevKeys['KeyE']) interactNearby();
   if (keys['KeyI'] && !prevKeys['KeyI']) {
@@ -306,7 +317,8 @@ function handleShortcuts() {
     else game.buildSys.enterDemolishMode();
   }
   if (keys['Escape'] && !prevKeys['Escape']) {
-    if (game.chestUI?._isOpen) { game.chestUI.close(); }
+    if (game.shopMgr?.isOpen) { game.shopMgr.close(); }
+    else if (game.chestUI?._isOpen) { game.chestUI.close(); }
     else if (game.backpackUI?._open) { game.backpackUI.close(); }
     else if (game.buildSys.mode || game.buildSys.demolishMode) game.buildMenu.exitBuildMode();
     else {
@@ -325,6 +337,10 @@ function interactNearby() {
     if (game.player.position.distanceTo(npc.position) < 2.5) { npc.interact(game); return; }
   }
   const gx = game.player.gx, gz = game.player.gz;
+  // Check for shop
+  const shop = game.shopMgr?.getShopAt(gx, gz);
+  if (shop) { game.shopMgr.open(shop); return; }
+
   for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
     const b = game.buildSys.getBuilding(gx + dx, gz + dz);
     if (b?.def?.isWell) { game.inventory.add('water_bucket', 1); game.showDialog('水バケツを汲んだ！💧'); return; }
@@ -351,6 +367,7 @@ function loop(time) {
   game.farmMgr.update(delta);
   game.fogOfWar.update(time / 1000);
   game.resMgr?.update(delta);
+  game.magicSys?.update(delta);
   game.buildSys.update(camera);
   for (const npc of game.npcs) npc.update(delta);
   game.hud.update(delta);

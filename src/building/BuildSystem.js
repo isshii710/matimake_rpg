@@ -202,7 +202,7 @@ export class BuildSystem {
     const { wx, wz } = this.grid.gridToWorld(gx, gz);
     mesh.position.set(wx, yPos, wz);
     mesh.rotation.y = this._rotation * Math.PI / 2;
-    if (layer === 2) {
+    if (layer === 1 || layer === 2) {
       mesh.material.transparent = true;
       mesh.material.opacity = 1.0;
     }
@@ -216,7 +216,7 @@ export class BuildSystem {
     }
 
     this._buildings.set(key, { id: buildingId, mesh, light, def, gx, gz, layer, wallFloor, rotation: this._rotation });
-    if (def.solid) this._solidCells.add(`${gx},${gz}`);
+    this._recomputeSolid(gx, gz);
 
     if (WALL_IDS.has(buildingId)) this._rebuildCornerPosts();
 
@@ -244,10 +244,7 @@ export class BuildSystem {
         this.game.inventory.add(item, Math.floor(count * 0.5));
       }
       this._buildings.delete(key);
-
-      if (this._getMaxWallFloor(gx, gz) === -1) {
-        this._solidCells.delete(`${gx},${gz}`);
-      }
+      this._recomputeSolid(gx, gz);
 
       this._rebuildCornerPosts();
       this.game.showDialog('撤去完了！素材を50%回収。');
@@ -268,7 +265,7 @@ export class BuildSystem {
         this.game.inventory.add(item, Math.floor(count * 0.5));
       }
       this._buildings.delete(key);
-      this._solidCells.delete(`${gx},${gz}`);
+      this._recomputeSolid(gx, gz);
 
       this.game.showDialog('撤去完了！素材を50%回収。');
       return true;
@@ -333,7 +330,7 @@ export class BuildSystem {
     const { wx, wz } = this.grid.gridToWorld(gx, gz);
     mesh.position.set(wx, yPos, wz);
     mesh.rotation.y = rotation * Math.PI / 2;
-    if (layer === 2) { mesh.material.transparent = true; mesh.material.opacity = 1.0; }
+    if (layer === 1 || layer === 2) { mesh.material.transparent = true; mesh.material.opacity = 1.0; }
     this.scene.add(mesh);
 
     let light = null;
@@ -343,22 +340,44 @@ export class BuildSystem {
       this.scene.add(light);
     }
     this._buildings.set(key, { id, mesh, light, def, gx, gz, layer, wallFloor, rotation });
-    if (def.solid) this._solidCells.add(`${gx},${gz}`);
+    this._recomputeSolid(gx, gz);
     if (WALL_IDS.has(id)) this._rebuildCornerPosts();
     return true;
   }
 
-  // ── Update (ghost + roof transparency) ───────────────────────────────────
+  // ── Solid cell helpers ────────────────────────────────────────────────────
+
+  _recomputeSolid(gx, gz) {
+    const floor0 = this._buildings.get(wkey(gx, gz, 0));
+    const groundB = this._buildings.get(lkey(gx, gz, 0));
+    if (floor0?.def.solid || groundB?.def.solid) {
+      this._solidCells.add(`${gx},${gz}`);
+    } else {
+      this._solidCells.delete(`${gx},${gz}`);
+    }
+  }
+
+  // ── Update (ghost + transparency) ────────────────────────────────────────
 
   update(camera) {
-    // Roof transparency: fade when player is nearby
     const px = this.game.player?.gx ?? -999;
     const pz = this.game.player?.gz ?? -999;
     for (const [, b] of this._buildings) {
-      if (b.layer !== 2) continue;
-      const dist = Math.max(Math.abs(b.gx - px), Math.abs(b.gz - pz));
-      const target = dist <= 2 ? 0.12 : 1.0;
-      b.mesh.material.opacity += (target - b.mesh.material.opacity) * 0.12;
+      if (!b.mesh.material.transparent) continue;
+      if (b.layer === 2) {
+        // Roof: fade when player is directly under or adjacent
+        const dist = Math.max(Math.abs(b.gx - px), Math.abs(b.gz - pz));
+        const target = dist <= 2 ? 0.12 : 1.0;
+        b.mesh.material.opacity += (target - b.mesh.material.opacity) * 0.12;
+      } else if (b.layer === 1) {
+        // Wall: fade when player is behind it (wall is between player and camera)
+        // Camera is at player+(25,22,25), so walls with +dx,+dz from player occlude
+        const dx = b.gx - px;
+        const dz = b.gz - pz;
+        const isOccluding = (dx + dz) > 0 && (dx + dz) <= 4 && dx >= 0 && dz >= 0;
+        const target = isOccluding ? 0.18 : 1.0;
+        b.mesh.material.opacity += (target - b.mesh.material.opacity) * 0.12;
+      }
     }
 
     if (!this.mode || !this._ghost) return;
@@ -450,7 +469,7 @@ export class BuildSystem {
         );
         const postH = WALL_H * (maxFloor + 1);
 
-        const postGeo = new THREE.BoxGeometry(0.28, postH, 0.28);
+        const postGeo = new THREE.BoxGeometry(0.5, postH, 0.5);
         const postMat = new THREE.MeshLambertMaterial({
           color: b.def.color,
           map: this._texFor(b.def),

@@ -9,6 +9,14 @@ export class HUD {
     this._dialogBox = document.getElementById('dialog-box');
     this._dialogTimer = 0;
     this._modeLabel = document.getElementById('mode-label');
+    this._damageFlash = document.getElementById('damage-flash');
+  }
+
+  flashDamage() {
+    if (!this._damageFlash) return;
+    this._damageFlash.classList.remove('flash');
+    void this._damageFlash.offsetWidth; // force reflow to restart animation
+    this._damageFlash.classList.add('flash');
   }
 
   update(delta) {

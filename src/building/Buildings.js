@@ -4,14 +4,14 @@ export const BUILDINGS = {
   wood_wall: {
     id: 'wood_wall', name: '木の壁', category: '建物',
     cost: { wood: 2 },
-    w: 1, h: 1.5, d: 0.25,
+    w: 1, h: 1.5, d: 0.5,
     color: 0x8B4513, solid: true,
     description: '丈夫な木製の壁',
   },
   stone_wall: {
     id: 'stone_wall', name: '石の壁', category: '建物',
     cost: { stone: 3 },
-    w: 1, h: 1.5, d: 0.25,
+    w: 1, h: 1.5, d: 0.5,
     color: 0x808080, solid: true,
     description: '頑丈な石造りの壁',
   },

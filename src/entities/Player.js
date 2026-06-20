@@ -278,6 +278,7 @@ export class Player {
 
   takeDamage(amount) {
     this.hp = Math.max(0, this.hp - amount);
+    this.game.hud?.flashDamage();
     if (this.hp <= 0) {
       this.hp = this.maxHp / 2;
       this.position.set(0.5, 1.0, 0.5);

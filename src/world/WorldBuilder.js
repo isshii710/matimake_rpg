@@ -9,6 +9,7 @@ export function buildWorld(game) {
   _buildNorthVillage(game);
   _buildSouthVillage(game);
   _buildForestOutpost(game);
+  _buildDungeon(game);
 }
 
 export function registerShops(game) {
@@ -38,6 +39,8 @@ export function registerShops(game) {
     { id: 'cloth', price: 8 },
     { id: 'iron', price: 15 },
   ]);
+  // Dungeon entrance (boss spawn trigger - no items)
+  _registerShop(g, 48, 20, 'ダンジョン入口 ⚠', []);
 }
 
 function _registerShop(game, gx, gz, name, items) {
@@ -111,7 +114,7 @@ function _buildSouthVillage(game) {
   ]);
 }
 
-// ── Forest outpost (grid ~15, 40) ─────────────────────────────────────────
+// ── Forest outpost (grid ~15, 42) ─────────────────────────────────────────
 
 function _buildForestOutpost(game) {
   const cx = 14, cz = 42;
@@ -120,6 +123,23 @@ function _buildForestOutpost(game) {
   game.buildSys.placeFromSave('lantern', cx - 2, cz + 1, 0, 0);
 
   _placeHouse(game, cx - 2, cz - 3, 'wood');
+}
+
+// ── Dungeon entrance (grid ~48, 20) ───────────────────────────────────────
+
+function _buildDungeon(game) {
+  const cx = 48, cz = 20;
+  // Mark dungeon entrance with stone walls forming a portal-like shape
+  for (let dx = -1; dx <= 1; dx++) {
+    game.buildSys.placeFromSave('stone_wall', cx + dx, cz - 1, 1, 0);
+    game.buildSys.placeFromSave('stone_wall', cx + dx, cz + 1, 1, 0);
+  }
+  game.buildSys.placeFromSave('stone_wall', cx - 2, cz, 1, 1);
+  game.buildSys.placeFromSave('stone_wall', cx + 2, cz, 1, 1);
+  game.buildSys.placeFromSave('campfire', cx, cz, 0, 0);
+
+  // Register dungeon as a special shop (boss trigger)
+  _registerShop(game, cx, cz, 'ダンジョン入口 ⚠', []);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────

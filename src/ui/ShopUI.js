@@ -26,6 +26,12 @@ export class ShopManager {
   }
 
   open(shop) {
+    // Dungeon entrance triggers boss fight, not a shop UI
+    if (shop.name.includes('ダンジョン')) {
+      this.game.showDialog('ダンジョン入口... 危険な気配がする！\n（ドラゴンが待ち受けている）');
+      this.game.enemyMgr?.spawnBoss();
+      return;
+    }
     this._currentShop = shop;
     this._open = true;
     this._render();

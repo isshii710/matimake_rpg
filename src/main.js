@@ -22,6 +22,7 @@ import { ResourceManager } from './world/Resources.js';
 import { MagicSystem } from './magic/MagicSystem.js';
 import { ShopManager } from './ui/ShopUI.js';
 import { buildWorld, registerShops } from './world/WorldBuilder.js';
+import { BattleSystem } from './battle/BattleSystem.js';
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -169,6 +170,7 @@ async function init() {
     game.backpackUI = new BackpackUI(game);
     game.chestUI    = new ChestUI(game);
     game.shopMgr    = new ShopManager(game);
+    game.battleSys  = new BattleSystem(game);
 
     document.getElementById('save-btn')?.addEventListener('click', () => game.saveSys.save());
     document.getElementById('bag-btn')?.addEventListener('click', () => {
@@ -362,7 +364,9 @@ function loop(time) {
   handleShortcuts();
   game.saveSys.update(delta);
   game.season.update(delta);
-  game.player.update(delta, keys, game.dpad);
+  if (!game.battleSys?.active && !game.shopMgr?.isOpen) {
+    game.player.update(delta, keys, game.dpad);
+  }
   game.enemyMgr.update(delta);
   game.farmMgr.update(delta);
   game.fogOfWar.update(time / 1000);

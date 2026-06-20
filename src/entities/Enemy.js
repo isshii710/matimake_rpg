@@ -3,13 +3,13 @@ import { GRID_SIZE, TILE_SIZE } from '../world/Grid.js';
 
 const ENEMY_TYPES = {
   slime: {
-    name: 'スライム', hp: 30, speed: 1.5, damage: 5,
+    name: 'スライム', icon: '🟢', hp: 30, speed: 1.5, damage: 5, level: 1,
     color: 0x44cc44, size: [0.8, 0.6, 1],
     drops: [{ item: 'stone', min: 1, max: 2, chance: 0.8 }],
     xp: 5,
   },
   goblin: {
-    name: 'ゴブリン', hp: 60, speed: 2.2, damage: 12,
+    name: 'ゴブリン', icon: '👺', hp: 60, speed: 2.2, damage: 12, level: 3,
     color: 0x996633, size: [0.7, 1.1, 1],
     drops: [
       { item: 'wood', min: 1, max: 3, chance: 0.7 },
@@ -17,6 +17,35 @@ const ENEMY_TYPES = {
       { item: 'iron', min: 1, max: 1, chance: 0.3 },
     ],
     xp: 12,
+  },
+  skeleton: {
+    name: 'スケルトン', icon: '💀', hp: 80, speed: 1.8, damage: 18, level: 5,
+    color: 0xd0ccc0, size: [0.7, 1.2, 1],
+    drops: [
+      { item: 'iron', min: 1, max: 2, chance: 0.6 },
+      { item: 'stone', min: 1, max: 3, chance: 0.8 },
+    ],
+    xp: 20,
+  },
+  orc: {
+    name: 'オーク', icon: '👹', hp: 120, speed: 1.6, damage: 25, level: 7,
+    color: 0x226622, size: [1.0, 1.3, 1],
+    drops: [
+      { item: 'leather', min: 1, max: 3, chance: 0.7 },
+      { item: 'iron', min: 1, max: 2, chance: 0.5 },
+      { item: 'gold', min: 10, max: 25, chance: 0.9 },
+    ],
+    xp: 35,
+  },
+  dragon: {
+    name: 'ドラゴン', icon: '🐉', hp: 300, speed: 2.0, damage: 45, level: 15,
+    color: 0xcc2200, size: [1.5, 1.5, 1],
+    drops: [
+      { item: 'iron', min: 5, max: 10, chance: 1.0 },
+      { item: 'gold', min: 80, max: 150, chance: 1.0 },
+      { item: 'leather', min: 3, max: 6, chance: 1.0 },
+    ],
+    xp: 200, isBoss: true,
   },
 };
 
@@ -54,11 +83,22 @@ export class EnemyManager {
     this.enemies.push(e);
   }
 
+  spawnBoss() {
+    // Spawn dragon boss near dungeon entrance (NE of map center)
+    const e = new Enemy(this.scene, 'dragon', 15, -12, ENEMY_TYPES.dragon);
+    this.enemies.push(e);
+    this.game.showDialog('🐉 ドラゴンが現れた！逃げろ！');
+  }
+
   update(delta) {
+    if (this.game.battleSys?.active) return; // freeze during turn-based combat
+
     this._spawnTimer += delta;
     if (this._spawnTimer >= this._spawnInterval && this.enemies.length < MAX_ENEMIES) {
       this._spawnTimer = 0;
-      this._spawnEnemy(Math.random() < 0.6 ? 'slime' : 'goblin');
+      const r = Math.random();
+      const type = r < 0.35 ? 'slime' : r < 0.65 ? 'goblin' : r < 0.85 ? 'skeleton' : 'orc';
+      this._spawnEnemy(type);
     }
 
     for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -150,6 +190,7 @@ class Enemy {
 
   update(delta, player, game) {
     if (this.dead) return;
+    if (game.battleSys?.active) return; // freeze during turn-based combat
 
     this._attackCooldown = Math.max(0, this._attackCooldown - delta);
     this._hitFlash = Math.max(0, this._hitFlash - delta * 4);
@@ -200,11 +241,19 @@ class Enemy {
   }
 
   _dropLoot(game) {
+    const dropped = [];
     for (const drop of this.def.drops) {
       if (Math.random() < drop.chance) {
         const count = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
         game.inventory.add(drop.item, count);
+        dropped.push(`${drop.item}×${count}`);
       }
+    }
+    if (dropped.length > 0) {
+      game.showDialog(`${this.def.name}を倒した！\n獲得: ${dropped.join(', ')}`);
+    }
+    if (this.def.isBoss) {
+      game.showDialog('ボスを倒した！英雄になった！');
     }
   }
 }

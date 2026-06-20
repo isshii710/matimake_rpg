@@ -254,7 +254,10 @@ export class Player {
       return;
     }
 
-    // Normal combat attack
+    // Try to start turn-based battle (Dragon Quest style)
+    if (this.game.battleSys?.tryStart()) return;
+
+    // Fallback: real-time attack (no enemies nearby for battle)
     for (const enemy of this.game.enemyMgr.enemies) {
       const dist = this.position.distanceTo(enemy.position);
       if (dist <= ATTACK_RANGE) {

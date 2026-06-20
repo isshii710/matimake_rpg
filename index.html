@@ -342,36 +342,30 @@
       pointer-events: none;
     }
 
-    /* ── Mobile DPad ────────────────────────────────────────── */
-    #dpad-container {
-      position: fixed;
-      bottom: 28px;
-      left: 24px;
-      pointer-events: auto;
+    /* ── Floating joystick (ぷにコン) ───────────────────────── */
+    #joystick-base {
       display: none;
+      position: fixed;
+      width: 104px;
+      height: 104px;
+      border-radius: 50%;
+      background: rgba(212, 165, 64, 0.10);
+      border: 2px solid rgba(212, 165, 64, 0.40);
+      box-shadow: 0 0 20px rgba(0,0,0,0.45);
+      pointer-events: none;
+      z-index: 50;
     }
-    .dpad-grid {
-      display: grid;
-      grid-template-columns: 52px 52px 52px;
-      grid-template-rows: 52px 52px 52px;
-      gap: 3px;
+    #joystick-knob {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,220,120,0.88), rgba(160,100,20,0.82));
+      border: 2px solid rgba(212,165,64,0.90);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.55);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
     }
-    .dpad-btn {
-      background: rgba(12, 8, 2, 0.82);
-      border: 2px solid #6B4F14;
-      border-radius: 8px;
-      color: #d4a080;
-      font-size: 20px;
-      cursor: pointer;
-      touch-action: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .dpad-btn:active { background: rgba(60, 38, 10, 0.9); }
-    .dpad-center { background: rgba(6, 4, 1, 0.5); border-color: #2a1a05; }
 
     #attack-btn {
       position: fixed;
@@ -396,7 +390,6 @@
     #attack-btn:active { background: rgba(140, 40, 20, 0.9); }
 
     @media (pointer: coarse) {
-      #dpad-container { display: block; }
       #attack-btn { display: flex; }
       #controls-hint { display: none; }
 
@@ -433,15 +426,24 @@
       /* モードラベル: クエストパネルと重ならない位置へ */
       #mode-label { top: 100px; font-size: 11px; padding: 3px 10px; }
 
-      /* インベントリ: スロット縮小 & Dパッドの上へ移動 */
-      #inventory-panel { bottom: 108px; }
-      #inventory { gap: 3px; padding: 5px; }
+      /* インベントリ: スロット縮小・攻撃ボタン分だけ右端を空ける */
+      #inventory-panel {
+        bottom: 20px;
+        left: 8px;
+        right: 90px;
+        transform: none;
+        overflow-x: auto;
+      }
+      #inventory { gap: 3px; padding: 5px; width: max-content; }
       .inv-slot { width: 40px; height: 40px; }
       .inv-icon { font-size: 18px; }
       .inv-count { font-size: 9px; bottom: 1px; right: 2px; }
 
+      /* 攻撃ボタン: 右下に独立配置 */
+      #attack-btn { bottom: 24px; right: 14px; width: 64px; height: 64px; font-size: 24px; }
+
       /* ダイアログ: インベントリの上へ */
-      #dialog-box { bottom: 180px; font-size: 12px; padding: 8px 16px; }
+      #dialog-box { bottom: 90px; font-size: 12px; padding: 8px 16px; }
     }
 
     /* ── Misc ───────────────────────────────────────────────── */
@@ -512,21 +514,6 @@
     B : 建設メニュー<br>
     クリック : 建設・農業・会話<br>
     R + クリック : 建物撤去
-  </div>
-
-  <!-- Mobile DPad -->
-  <div id="dpad-container">
-    <div id="dpad" class="dpad-grid">
-      <div></div>
-      <button id="dpad-up"    class="dpad-btn">↑</button>
-      <div></div>
-      <button id="dpad-left"  class="dpad-btn">←</button>
-      <div class="dpad-btn dpad-center"></div>
-      <button id="dpad-right" class="dpad-btn">→</button>
-      <div></div>
-      <button id="dpad-down"  class="dpad-btn">↓</button>
-      <div></div>
-    </div>
   </div>
 
   <!-- Mobile attack button -->

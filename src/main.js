@@ -197,6 +197,7 @@ const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 canvas.addEventListener('click', onCanvasClick);
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
+  if (game.dpad?.isDragging) return;
   const t = e.changedTouches[0];
   onCanvasClick({ clientX: t.clientX, clientY: t.clientY });
 }, { passive: false });

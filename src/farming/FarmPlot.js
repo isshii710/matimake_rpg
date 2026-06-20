@@ -86,11 +86,14 @@ export class FarmManager {
 
   update(delta) {
     for (const [key, plot] of this.plots) {
-      if (plot.state !== 'growing') continue;
+      if (plot.state !== 'planted' && plot.state !== 'growing') continue;
 
-      plot.growthTimer += delta;
       const crop = CROPS[plot.cropId];
       if (!crop) continue;
+
+      // Watered crops grow at full speed; unwatered grow at half speed
+      const rate = plot.watered ? 1.0 : 0.5;
+      plot.growthTimer += delta * rate;
 
       if (plot.growthTimer >= crop.growthTime) {
         plot.growthTimer = 0;
@@ -98,6 +101,8 @@ export class FarmManager {
         if (plot.growthStage >= crop.stages) {
           plot.growthStage = crop.stages - 1;
           plot.state = 'ready';
+        } else {
+          plot.state = 'growing';
         }
         this._updateCropMesh(key, plot);
       }

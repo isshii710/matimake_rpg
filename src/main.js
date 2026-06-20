@@ -201,23 +201,32 @@ async function init() {
     const hadSave = game.saveSys.hasSave();
     const loadedOK = hadSave && game.saveSys.load();
     if (loadedOK) {
-      registerShops(game); // re-register shop locations without re-placing buildings
+      registerShops(game);
     } else {
       placeStarterBuildings();
-      buildWorld(game);
-      game.resMgr.generate();
     }
 
-    // postprocessingは非同期で（失敗してもゲームは動く）
+    // Start rendering immediately so the loading screen can hide.
+    // Heavy world generation (buildings + resources) is deferred to after
+    // the first frame so mobile doesn't block the main thread for 10+ s.
     composer = await setupPostProcessing();
     game.composer = composer;
 
     hideLoading();
-    const welcomeMsg = hadSave
+    requestAnimationFrame(loop);
+
+    if (!loadedOK) {
+      // Yield one frame so the canvas actually appears, then build
+      await new Promise(r => setTimeout(r, 60));
+      buildWorld(game);
+      // Resources (trees/rocks) are skipped on mobile — too GPU-heavy
+      if (!isMobile) game.resMgr.generate();
+    }
+
+    const welcomeMsg = loadedOK
       ? 'セーブデータを読み込みました！Sキーでセーブ・Iキーでバッグ'
       : 'ようこそ！WASDで移動・SPACEで攻撃・Bで建設・Eで調べる・Sでセーブ';
-    setTimeout(() => game.showDialog(welcomeMsg), 600);
-    requestAnimationFrame(loop);
+    setTimeout(() => game.showDialog(welcomeMsg), 200);
 
   } catch (err) {
     console.error('Init error:', err);

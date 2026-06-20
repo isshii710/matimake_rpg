@@ -371,10 +371,10 @@ export class BuildSystem {
         b.mesh.material.opacity += (target - b.mesh.material.opacity) * 0.12;
       } else if (b.layer === 1) {
         // Wall: fade when player is behind it (wall is between player and camera)
-        // Camera is at player+(25,22,25), so walls with +dx,+dz from player occlude
+        // Camera is at player+(14,20,14), so walls with +dx,+dz from player occlude
         const dx = b.gx - px;
         const dz = b.gz - pz;
-        const isOccluding = (dx + dz) > 0 && (dx + dz) <= 4 && dx >= 0 && dz >= 0;
+        const isOccluding = (dx + dz) > 0 && (dx + dz) <= 3 && dx >= 0 && dz >= 0;
         const target = isOccluding ? 0.18 : 1.0;
         b.mesh.material.opacity += (target - b.mesh.material.opacity) * 0.12;
       }

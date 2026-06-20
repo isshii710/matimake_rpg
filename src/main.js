@@ -64,16 +64,20 @@ scene.background = new THREE.Color(0x0e0806);
 scene.fog = new THREE.FogExp2(0x100806, isMobile ? 0.010 : 0.013);
 
 // ─── Camera ────────────────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(25, 22, 25);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(14, 20, 14);
 camera.lookAt(0, 0, 0);
 
 // ─── Postprocessing（失敗してもOK） ────────────────────────────────────────
 let composer = null;
 async function setupPostProcessing() {
-  if (isMobile) return null; // モバイルはskip
+  if (isMobile) return null;
   try {
-    const pp = await import('postprocessing');
+    // 5-second timeout so a slow CDN never blocks the loading screen
+    const pp = await Promise.race([
+      import('postprocessing'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+    ]);
     const c = new pp.EffectComposer(renderer);
     c.addPass(new pp.RenderPass(scene, camera));
     c.addPass(new pp.EffectPass(camera,
@@ -195,8 +199,8 @@ async function init() {
 
     // Try to load a saved game; otherwise place starter buildings
     const hadSave = game.saveSys.hasSave();
-    if (hadSave) {
-      game.saveSys.load();
+    const loadedOK = hadSave && game.saveSys.load();
+    if (loadedOK) {
       registerShops(game); // re-register shop locations without re-placing buildings
     } else {
       placeStarterBuildings();
@@ -239,7 +243,7 @@ function placeStarterBuildings() {
 }
 
 // ─── Camera follow ─────────────────────────────────────────────────────────
-const CAM_OFFSET = new THREE.Vector3(25, 22, 25);
+const CAM_OFFSET = new THREE.Vector3(14, 20, 14);
 const camTarget  = new THREE.Vector3();
 const camLookAt  = new THREE.Vector3();
 

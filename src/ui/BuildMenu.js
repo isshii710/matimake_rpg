@@ -17,6 +17,21 @@ export class BuildMenu {
   _bindToggle() {
     const btn = document.getElementById('build-toggle');
     if (btn) btn.addEventListener('click', () => this.toggle());
+    const dem = document.getElementById('demolish-toggle');
+    if (dem) dem.addEventListener('click', () => {
+      if (this.game.buildSys.demolishMode) {
+        this.game.buildSys.exitBuildMode();
+      } else {
+        this._open = false;
+        this._el.style.display = 'none';
+        this.game.buildSys.enterDemolishMode();
+        this._render();
+      }
+    });
+    const rotBtn = document.getElementById('rotate-btn');
+    if (rotBtn) rotBtn.addEventListener('click', () => {
+      if (this.game.buildSys.mode) this.game.buildSys.rotate();
+    });
   }
 
   toggle() {

@@ -185,6 +185,32 @@
     }
     #build-toggle:hover { background: rgba(60, 38, 10, 0.95); border-color: #d4a540; }
 
+    #demolish-toggle {
+      background: rgba(40, 12, 6, 0.92);
+      border: 1px solid #7a2a1a;
+      border-radius: 5px;
+      color: #dd6644;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    #demolish-toggle:hover { background: rgba(80, 24, 10, 0.95); }
+    #demolish-toggle.active { background: rgba(110, 30, 10, 0.95); border-color: #ff4422; color: #ff8866; }
+
+    #rotate-btn {
+      background: rgba(20, 14, 4, 0.92);
+      border: 1px solid #6B4F14;
+      border-radius: 5px;
+      color: #c0a040;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+    #rotate-btn:hover { background: rgba(50, 35, 8, 0.95); }
+
     #build-menu {
       position: absolute;
       top: calc(100% + 6px);
@@ -489,7 +515,11 @@
 
   <!-- Build menu -->
   <div id="build-panel">
-    <button id="build-toggle">🔨 建設メニュー [B]</button>
+    <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
+      <button id="build-toggle">🔨 建設 [B]</button>
+      <button id="demolish-toggle">⛏ 撤去 [D]</button>
+      <button id="rotate-btn" title="回転 [R]">↻</button>
+    </div>
     <div id="build-menu" style="display:none;">
       <div id="build-tabs"></div>
       <div id="build-list"></div>

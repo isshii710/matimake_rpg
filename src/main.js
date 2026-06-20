@@ -212,14 +212,20 @@ function onCanvasClick(e) {
 
   const { gx, gz } = game.grid.worldToGrid(pt.x, pt.z);
 
+  if (game.buildSys.demolishMode) { game.buildSys.demolish(gx, gz); return; }
   if (game.buildSys.mode) { game.buildSys.place(gx, gz); return; }
 
   const plot = game.farmMgr.getPlot(gx, gz);
   if (plot) {
     if (plot.state === 'ready') { game.farmMgr.harvest(gx, gz); }
     else if (plot.state === 'empty' && game.farmMode.selectedCrop) { game.farmMgr.plant(gx, gz, game.farmMode.selectedCrop); }
-    else if ((plot.state === 'planted' || plot.state === 'growing') && game.inventory.has('water_bucket', 1)) { game.farmMgr.water(gx, gz); }
-    else if (plot.state === 'planted') { game.showDialog('水バケツが必要！井戸の近くでEを押そう。'); }
+    else if ((plot.state === 'planted' || plot.state === 'growing') && game.inventory.has('water_bucket', 1)) {
+      game.farmMgr.water(gx, gz);
+      game.showDialog('水やり完了！水バケツを使った（井戸でまた汲める）');
+    }
+    else if (plot.state === 'planted' || plot.state === 'growing') {
+      game.showDialog(`成長中 (${plot.growthStage + 1}/4)... 水やりで加速！井戸でEを押して水を汲もう`);
+    }
     else { game.showDialog(`成長中... ステージ ${plot.growthStage + 1}/4`); }
     return;
   }
@@ -233,8 +239,7 @@ function onCanvasClick(e) {
   }
 
   const building = game.buildSys.getBuilding(gx, gz);
-  if (building?.def?.isWell) { game.inventory.add('water_bucket', 1); game.showDialog('水バケツを汲んだ！💧'); return; }
-  if (keys['KeyR'] && building) { game.buildSys.remove(gx, gz); game.showDialog('建物を撤去（素材50%回収）'); return; }
+  if (building?.def?.isWell) { game.inventory.add('water_bucket', 1); game.showDialog('水バケツを汲んだ！'); return; }
 
   for (const npc of game.npcs) {
     const ng = game.grid.worldToGrid(npc.position.x, npc.position.z);
@@ -246,8 +251,15 @@ function onCanvasClick(e) {
 function handleShortcuts() {
   if (keys['KeyB'] && !prevKeys['KeyB']) game.buildMenu.toggle();
   if (keys['KeyE'] && !prevKeys['KeyE']) interactNearby();
+  if (keys['KeyR'] && !prevKeys['KeyR']) {
+    if (game.buildSys.mode) game.buildSys.rotate();
+  }
+  if (keys['KeyD'] && !prevKeys['KeyD']) {
+    if (game.buildSys.demolishMode) game.buildSys.exitBuildMode();
+    else game.buildSys.enterDemolishMode();
+  }
   if (keys['Escape'] && !prevKeys['Escape']) {
-    if (game.buildSys.mode) game.buildMenu.exitBuildMode();
+    if (game.buildSys.mode || game.buildSys.demolishMode) game.buildMenu.exitBuildMode();
     else { game.farmMode.selectedCrop = null; game.inventory._selectedSeedId = null; game.inventory.render(); }
   }
   Object.assign(prevKeys, keys);

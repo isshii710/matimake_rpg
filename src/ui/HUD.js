@@ -38,13 +38,23 @@ export class HUD {
 
     // Mode label
     if (this._modeLabel) {
-      if (this.game.buildSys.mode) {
-        const b = this.game.buildSys.selectedId;
-        this._modeLabel.textContent = `🔨 建設モード: ${b || ''}　右クリックでキャンセル`;
+      const bs = this.game.buildSys;
+      if (bs.demolishMode) {
+        this._modeLabel.textContent = '⛏ 撤去モード: タップで撤去（素材50%回収）';
         this._modeLabel.style.display = 'block';
+        this._modeLabel.style.borderColor = '#cc3322';
+        this._modeLabel.style.color = '#ff7755';
+      } else if (bs.mode) {
+        const name = bs.selectedId || '';
+        this._modeLabel.textContent = `🔨 建設: ${name}  ↻R=回転`;
+        this._modeLabel.style.display = 'block';
+        this._modeLabel.style.borderColor = '#8B6914';
+        this._modeLabel.style.color = '#d4a540';
       } else if (this.game.farmMode.selectedCrop) {
-        this._modeLabel.textContent = `🌱 農業モード: ${this.game.farmMode.selectedCrop}　クリックで植える`;
+        this._modeLabel.textContent = `🌱 農業: ${this.game.farmMode.selectedCrop}  タップで植える`;
         this._modeLabel.style.display = 'block';
+        this._modeLabel.style.borderColor = '#8B6914';
+        this._modeLabel.style.color = '#d4a540';
       } else {
         this._modeLabel.style.display = 'none';
       }

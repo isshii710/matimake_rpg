@@ -135,15 +135,21 @@ export function dangerGrassTex() {
 
 // ── Building textures ────────────────────────────────────────────────────────
 
+// Cache textures so we never create the same canvas+GPU upload twice
+const _texCache = new Map();
+function cachedTex(key, fn) {
+  if (!_texCache.has(key)) _texCache.set(key, fn());
+  return _texCache.get(key);
+}
+
 export function woodTex(hex = 0x8B4513) {
+  return cachedTex(`wood_${hex}`, () => {
   const c = canvas(S); const ctx = c.getContext('2d');
   const col = `#${hex.toString(16).padStart(6,'0')}`;
   ctx.fillStyle = col; ctx.fillRect(0, 0, S, S);
   const r = rng(7 + hex);
-  // plank dividers
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   for (let y = 0; y < S; y += 14) ctx.fillRect(0, y, S, 1.5);
-  // grain lines
   for (let i = 0; i < 22; i++) {
     const y = r() * S;
     ctx.strokeStyle = r() < 0.5 ? 'rgba(0,0,0,0.22)' : 'rgba(255,200,120,0.18)';
@@ -152,9 +158,11 @@ export function woodTex(hex = 0x8B4513) {
     ctx.quadraticCurveTo(S/2, y+(r()-0.5)*4, S, y+(r()-0.5)*2); ctx.stroke();
   }
   return new THREE.CanvasTexture(c);
+  });
 }
 
 export function stoneWallTex() {
+  return cachedTex('stoneWall', () => {
   const c = canvas(128); const ctx = c.getContext('2d');
   ctx.fillStyle = '#6e6e65'; ctx.fillRect(0, 0, 128, 128);
   const r = rng(8);
@@ -178,9 +186,11 @@ export function stoneWallTex() {
     ctx.fillRect(0, y, 128, 2);
   }
   return new THREE.CanvasTexture(c);
+  });
 }
 
 export function roofTex() {
+  return cachedTex('roof', () => {
   const c = canvas(S); const ctx = c.getContext('2d');
   ctx.fillStyle = '#7a3232'; ctx.fillRect(0, 0, S, S);
   const r = rng(9);
@@ -196,23 +206,23 @@ export function roofTex() {
     ctx.fillRect(0, row*8, S, 1);
   }
   return new THREE.CanvasTexture(c);
+  });
 }
 
 export function chestTex() {
+  return cachedTex('chest', () => {
   const c = canvas(S); const ctx = c.getContext('2d');
   ctx.fillStyle = '#7a4820'; ctx.fillRect(0, 0, S, S);
   const r = rng(10);
-  // plank lines
   for (let y = 0; y < S; y += 16) {
     ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, y, S, 2);
   }
-  // iron bands
   ctx.fillStyle = '#888'; ctx.fillRect(0, S/2-4, S, 8);
   ctx.fillStyle = '#aaa'; ctx.fillRect(0, S/2-3, S, 2);
-  // lock
   ctx.fillStyle = '#ccaa00'; ctx.fillRect(S/2-4, S/2-6, 8, 12); ctx.beginPath();
   ctx.arc(S/2, S/2-2, 3, 0, Math.PI*2); ctx.fillStyle='#ffdd00'; ctx.fill();
   return new THREE.CanvasTexture(c);
+  });
 }
 
 export function mountainTex() {

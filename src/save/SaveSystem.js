@@ -53,6 +53,7 @@ export class SaveSystem {
       buildings.push({
         id: b.id, gx: b.gx, gz: b.gz, layer: b.layer,
         rotation: Math.round(b.mesh.rotation.y / (Math.PI / 2)),
+        wallFloor: b.wallFloor || 0,
       });
     }
 
@@ -102,7 +103,7 @@ export class SaveSystem {
 
     if (data.buildings) {
       for (const b of data.buildings) {
-        g.buildSys.placeFromSave(b.id, b.gx, b.gz, b.layer ?? 0, b.rotation ?? 0);
+        g.buildSys.placeFromSave(b.id, b.gx, b.gz, b.layer ?? 0, b.rotation ?? 0, b.wallFloor ?? 0);
       }
     }
 

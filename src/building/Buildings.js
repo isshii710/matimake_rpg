@@ -35,7 +35,14 @@ export const BUILDINGS = {
     w: 1, h: 0.8, d: 1,
     color: 0x8B3A3A, solid: false,
     isRoof: true,
-    description: '雨をしのぐ屋根',
+    description: '雨をしのぐ三角屋根',
+  },
+  flat_roof: {
+    id: 'flat_roof', name: '平らな屋根板', category: '建物',
+    cost: { wood: 2 },
+    w: 1.02, h: 0.12, d: 1.02,
+    color: 0x2244aa, solid: false,
+    description: '平らな屋根板（重ねて高い建物の屋根に）',
   },
   door: {
     id: 'door', name: 'ドア', category: '建物',

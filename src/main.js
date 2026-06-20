@@ -212,6 +212,7 @@ async function init() {
     composer = await setupPostProcessing();
     game.composer = composer;
 
+    window.__GAME_STARTED__ = true;
     hideLoading();
     requestAnimationFrame(loop);
 

@@ -11,4 +11,18 @@ export const ITEMS = {
   pumpkin_seed: { id: 'pumpkin_seed', name: 'カボチャの種', icon: '🌱', stackable: true, maxStack: 99 },
   herb_seed:    { id: 'herb_seed',    name: 'ハーブの種', icon: '🌱', stackable: true,  maxStack: 99 },
   water_bucket: { id: 'water_bucket', name: '水バケツ',   icon: '🪣', stackable: true,  maxStack: 5  },
+
+  // ── 建築アイテム（クラフトしてインベントリに入る） ──────────────────────
+  wood_wall:   { id: 'wood_wall',   name: '木の壁',   icon: '🧱', stackable: true, maxStack: 20, isBuildingItem: true },
+  stone_wall:  { id: 'stone_wall',  name: '石の壁',   icon: '🪨', stackable: true, maxStack: 20, isBuildingItem: true },
+  wood_floor:  { id: 'wood_floor',  name: '木の床',   icon: '🟤', stackable: true, maxStack: 20, isBuildingItem: true },
+  stone_floor: { id: 'stone_floor', name: '石畳',     icon: '⬜', stackable: true, maxStack: 20, isBuildingItem: true },
+  roof:        { id: 'roof',        name: '三角屋根', icon: '🔺', stackable: true, maxStack: 20, isBuildingItem: true },
+  door:        { id: 'door',        name: 'ドア',     icon: '🚪', stackable: true, maxStack: 20, isBuildingItem: true },
+  campfire:    { id: 'campfire',    name: '焚き火',   icon: '🔥', stackable: true, maxStack: 10, isBuildingItem: true },
+  lantern:     { id: 'lantern',     name: 'ランタン', icon: '🏮', stackable: true, maxStack: 10, isBuildingItem: true },
+  table:       { id: 'table',       name: 'テーブル', icon: '🪑', stackable: true, maxStack: 10, isBuildingItem: true },
+  bed:         { id: 'bed',         name: 'ベッド',   icon: '🛏', stackable: true, maxStack: 5,  isBuildingItem: true },
+  well:        { id: 'well',        name: '井戸',     icon: '💧', stackable: true, maxStack: 5,  isBuildingItem: true },
+  chest:       { id: 'chest',       name: 'チェスト', icon: '📦', stackable: true, maxStack: 10, isBuildingItem: true },
 };

@@ -200,19 +200,14 @@ async function init() {
 }
 
 function placeStarterBuildings() {
-  const place = (id, gx, gz, extras = {}) => {
-    for (const [k, v] of Object.entries(extras)) game.inventory.add(k, v);
-    game.buildSys.enterBuildMode(id);
-    game.buildSys.place(gx, gz);
-    game.buildSys.exitBuildMode();
-  };
-  place('campfire', 32, 33, { stone: 5 });
-  place('well',     30, 30, { stone: 10 });
-  place('lantern',  35, 30, { iron: 2, cloth: 2 });
-  place('lantern',  29, 35, { iron: 1, cloth: 1 });
-  game.inventory.add('wood', 15);
-  game.inventory.add('stone', 12);
-  game.inventory.add('iron', 2);
+  game.buildSys.placeFromSave('campfire', 32, 33, 0, 0);
+  game.buildSys.placeFromSave('well',     30, 30, 0, 0);
+  game.buildSys.placeFromSave('lantern',  35, 30, 0, 0);
+  game.buildSys.placeFromSave('lantern',  29, 35, 0, 0);
+  game.inventory.add('wood', 10);
+  game.inventory.add('stone', 7);
+  game.inventory.add('iron', 3);
+  game.inventory.add('cloth', 2);
 }
 
 // ─── Camera follow ─────────────────────────────────────────────────────────
@@ -311,7 +306,12 @@ function handleShortcuts() {
     if (game.chestUI?._isOpen) { game.chestUI.close(); }
     else if (game.backpackUI?._open) { game.backpackUI.close(); }
     else if (game.buildSys.mode || game.buildSys.demolishMode) game.buildMenu.exitBuildMode();
-    else { game.farmMode.selectedCrop = null; game.inventory._selectedSeedId = null; game.inventory.render(); }
+    else {
+      game.farmMode.selectedCrop = null;
+      game.inventory._selectedSeedId = null;
+      game.inventory._selectedBuildingId = null;
+      game.inventory.render();
+    }
   }
   Object.assign(prevKeys, keys);
 }

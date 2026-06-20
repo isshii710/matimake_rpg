@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BUILDINGS } from './Buildings.js';
+import { ITEMS } from '../data/Items.js';
 import { woodTex, stoneWallTex, roofTex, chestTex } from '../world/TextureFactory.js';
 
 // Building layer: 0=ground(floor/furniture), 1=wall, 2=roof
@@ -9,6 +10,7 @@ const LAYER = {
   wood_wall: 1, stone_wall: 1, door: 1,
   roof: 2,
 };
+const WALL_IDS = new Set(['wood_wall', 'stone_wall', 'door']);
 const WALL_H = 1.5; // must match Buildings.js wall height
 
 function lkey(gx, gz, layer) { return `${gx},${gz}:${layer}`; }
@@ -25,9 +27,10 @@ export class BuildSystem {
     this.demolishMode = false;
     this._rotation = 0; // 0‑3, applied as rotation.y = n * PI/2
 
-    this._buildings = new Map(); // lkey -> { id, mesh, light, def, gx, gz, layer }
+    this._buildings = new Map(); // lkey -> { id, mesh, light, def, gx, gz, layer, rotation }
     this._solidCells = new Set();
     this._chestInventories = new Map(); // `${gx},${gz}` -> [{id,count}]
+    this._cornerPosts = new Map(); // postKey -> mesh
 
     this._ghost = null;
     this._raycaster = new THREE.Raycaster();
@@ -75,14 +78,51 @@ export class BuildSystem {
     this.game.showDialog(`回転: ${this._rotation * 90}°`);
   }
 
+  // ── Craft building item ───────────────────────────────────────────────────
+
+  craftBuilding(id) {
+    const def = BUILDINGS[id];
+    if (!def) return false;
+
+    for (const [item, count] of Object.entries(def.cost)) {
+      if (!this.game.inventory.has(item, count)) {
+        const iDef = ITEMS[item];
+        this.game.showDialog(`素材不足！${iDef?.icon || ''}${iDef?.name || item}×${count}必要`);
+        return false;
+      }
+    }
+
+    for (const [item, count] of Object.entries(def.cost)) {
+      this.game.inventory.remove(item, count);
+    }
+
+    this.game.inventory.add(id, 1);
+    this.game.showDialog(`${def.name}をクラフト！クリックで設置`);
+
+    // Auto-select and enter build mode
+    this.game.inventory._selectedBuildingId = id;
+    this.enterBuildMode(id);
+    this.game.inventory.render();
+    return true;
+  }
+
   // ── Place ─────────────────────────────────────────────────────────────────
 
   place(gx, gz) {
     if (!this.mode || !this.selectedId) return false;
-    const def = BUILDINGS[this.selectedId];
+    const buildingId = this.selectedId; // save before potential exitBuildMode via inventory
+    const def = BUILDINGS[buildingId];
     if (!def) return false;
 
-    const layer = getLayer(this.selectedId);
+    const isBuildingItem = !!ITEMS[buildingId]?.isBuildingItem;
+
+    if (isBuildingItem && !this.game.inventory.has(buildingId, 1)) {
+      this.game.showDialog(`${def.name}がない！まず作ろう`);
+      this.exitBuildMode();
+      return false;
+    }
+
+    const layer = getLayer(buildingId);
     const key = lkey(gx, gz, layer);
 
     if (this._buildings.has(key)) {
@@ -93,19 +133,24 @@ export class BuildSystem {
       this.game.showDialog('ここには建てられない！');
       return false;
     }
-    for (const [item, count] of Object.entries(def.cost)) {
-      if (!this.game.inventory.has(item, count)) {
-        this.game.showDialog(`${item}が${count}個必要！`);
-        return false;
+
+    if (isBuildingItem) {
+      this.game.inventory.remove(buildingId, 1); // may trigger exitBuildMode if last item
+    } else {
+      for (const [item, count] of Object.entries(def.cost)) {
+        if (!this.game.inventory.has(item, count)) {
+          this.game.showDialog(`${item}が${count}個必要！`);
+          return false;
+        }
       }
-    }
-    for (const [item, count] of Object.entries(def.cost)) {
-      this.game.inventory.remove(item, count);
+      for (const [item, count] of Object.entries(def.cost)) {
+        this.game.inventory.remove(item, count);
+      }
     }
 
     const mesh = this._createMesh(def);
     const { wx, wz } = this.grid.gridToWorld(gx, gz);
-    mesh.position.set(wx, this._yFor(this.selectedId, def), wz);
+    mesh.position.set(wx, this._yFor(buildingId, def), wz);
     mesh.rotation.y = this._rotation * Math.PI / 2;
     if (layer === 2) {
       mesh.material.transparent = true;
@@ -120,10 +165,12 @@ export class BuildSystem {
       this.scene.add(light);
     }
 
-    this._buildings.set(key, { id: this.selectedId, mesh, light, def, gx, gz, layer });
+    this._buildings.set(key, { id: buildingId, mesh, light, def, gx, gz, layer, rotation: this._rotation });
     if (def.solid) this._solidCells.add(`${gx},${gz}`);
 
-    this.game.questMgr.onEvent('build', { target: this.selectedId });
+    if (WALL_IDS.has(buildingId)) this._rebuildCornerPosts();
+
+    this.game.questMgr.onEvent('build', { target: buildingId });
     if (def.isWell) this.game.showDialog('井戸を建てた！近くでEを押すと水バケツを汲める。');
     if (def.isChest) this.game.showDialog('チェストを建てた！近づいてクリック（またはE）で開ける。');
 
@@ -152,6 +199,8 @@ export class BuildSystem {
       if (!this._buildings.has(lkey(gx, gz, 1))) {
         this._solidCells.delete(`${gx},${gz}`);
       }
+
+      if (WALL_IDS.has(b.id)) this._rebuildCornerPosts();
       this.game.showDialog('撤去完了！素材を50%回収。');
       return true;
     }
@@ -207,8 +256,9 @@ export class BuildSystem {
       light.position.set(wx, 1.5, wz);
       this.scene.add(light);
     }
-    this._buildings.set(key, { id, mesh, light, def, gx, gz, layer });
+    this._buildings.set(key, { id, mesh, light, def, gx, gz, layer, rotation });
     if (def.solid) this._solidCells.add(`${gx},${gz}`);
+    if (WALL_IDS.has(id)) this._rebuildCornerPosts();
     return true;
   }
 
@@ -230,17 +280,67 @@ export class BuildSystem {
     const pt = new THREE.Vector3();
     if (this._raycaster.ray.intersectPlane(this._groundPlane, pt)) {
       const { gx, gz } = this.grid.worldToGrid(pt.x, pt.z);
-      if (gx !== this._ghostGx || gz !== this._ghostGz) {
+      const { wx, wz } = this.grid.gridToWorld(gx, gz);
+      const def = BUILDINGS[this.selectedId];
+      const layer = getLayer(this.selectedId);
+
+      // Auto-rotate walls based on which axis the cursor is nearer to
+      let rotChanged = false;
+      if (WALL_IDS.has(this.selectedId)) {
+        const newRot = Math.abs(pt.x - wx) > Math.abs(pt.z - wz) ? 1 : 0;
+        if (newRot !== this._rotation) {
+          this._rotation = newRot;
+          this._ghost.rotation.y = this._rotation * Math.PI / 2;
+          rotChanged = true;
+        }
+      }
+
+      if (gx !== this._ghostGx || gz !== this._ghostGz || rotChanged) {
         this._ghostGx = gx;
         this._ghostGz = gz;
-        const def = BUILDINGS[this.selectedId];
-        const layer = getLayer(this.selectedId);
-        const { wx, wz } = this.grid.gridToWorld(gx, gz);
         this._ghost.position.set(wx, this._yFor(this.selectedId, def), wz);
         const canPlace = (layer === 2 || this.grid.isWalkable(gx, gz))
           && !this._buildings.has(lkey(gx, gz, layer));
         this._ghost.material.color.setHex(canPlace ? 0x88ff88 : 0xff4444);
         this._ghost.material.opacity = canPlace ? 0.5 : 0.4;
+      }
+    }
+  }
+
+  // ── Corner posts (fill L-junction gaps between perpendicular walls) ────────
+
+  _rebuildCornerPosts() {
+    for (const mesh of this._cornerPosts.values()) {
+      this.scene.remove(mesh);
+      mesh.geometry.dispose();
+    }
+    this._cornerPosts.clear();
+
+    const postGeo = new THREE.BoxGeometry(0.28, WALL_H, 0.28);
+    for (const [, b] of this._buildings) {
+      if (!WALL_IDS.has(b.id)) continue;
+      const bRot = b.rotation % 2;
+      const { wx: bx, wz: bz } = this.grid.gridToWorld(b.gx, b.gz);
+
+      for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nb = this._buildings.get(lkey(b.gx + dx, b.gz + dz, 1));
+        if (!nb || !WALL_IDS.has(nb.id)) continue;
+        if (nb.rotation % 2 === bRot) continue; // parallel – no corner
+
+        const { wx: nx, wz: nz } = this.grid.gridToWorld(nb.gx, nb.gz);
+        const px = (bx + nx) / 2;
+        const pz = (bz + nz) / 2;
+        const pKey = `${px.toFixed(3)},${pz.toFixed(3)}`;
+        if (this._cornerPosts.has(pKey)) continue;
+
+        const postMat = new THREE.MeshLambertMaterial({
+          color: b.def.color,
+          map: this._texFor(b.def),
+        });
+        const post = new THREE.Mesh(postGeo, postMat);
+        post.position.set(px, 0.075 + WALL_H / 2, pz);
+        this.scene.add(post);
+        this._cornerPosts.set(pKey, post);
       }
     }
   }

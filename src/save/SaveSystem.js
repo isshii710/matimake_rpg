@@ -83,6 +83,7 @@ export class SaveSystem {
         completed: g.questMgr.completed.map(q => q.id),
       },
       season: { totalDays: g.season.totalDays, elapsed: g.season._elapsed },
+      resources: g.resMgr?.serialize(),
     };
   }
 
@@ -130,6 +131,12 @@ export class SaveSystem {
     if (data.season) {
       g.season.totalDays = data.season.totalDays || 0;
       g.season._elapsed = data.season.elapsed || 0;
+    }
+
+    if (data.resources && g.resMgr) {
+      g.resMgr.loadFromSave(data.resources);
+    } else {
+      g.resMgr?.generate();
     }
   }
 }

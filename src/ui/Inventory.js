@@ -10,6 +10,7 @@ export class Inventory {
     this._el = document.getElementById('inventory');
     this._selectedSeedId = null;
     this._selectedBuildingId = null;
+    this._selectedToolId = null;
 
     // Start with some basic resources
     this.add('wood', 10);
@@ -76,7 +77,7 @@ export class Inventory {
 
     this._el.innerHTML = display.map((slot, i) => {
       const def = ITEMS[slot.id] || {};
-      const isSelected = slot.id === this._selectedSeedId || slot.id === this._selectedBuildingId;
+      const isSelected = slot.id === this._selectedSeedId || slot.id === this._selectedBuildingId || slot.id === this._selectedToolId;
       return `<div class="inv-slot ${isSelected ? 'selected' : ''}" data-idx="${i}" title="${def.name || slot.id}">
         <span class="inv-icon">${def.icon || '?'}</span>
         <span class="inv-count">${slot.count}</span>
@@ -98,6 +99,7 @@ export class Inventory {
 
         if (slot.id.endsWith('_seed')) {
           this._selectedBuildingId = null;
+          this._selectedToolId = null;
           this.game.buildSys?.exitBuildMode();
           this._selectedSeedId = this._selectedSeedId === slot.id ? null : slot.id;
           const cropId = slot.id.replace('_seed', '');
@@ -106,8 +108,22 @@ export class Inventory {
           if (this._selectedSeedId) {
             this.game.showDialog(`${def.name || slot.id}を選択。畑をクリックして植えよう！`);
           }
+        } else if (def.isTool) {
+          this._selectedSeedId = null;
+          this._selectedBuildingId = null;
+          this.game.farmMode.selectedCrop = null;
+          this.game.buildSys?.exitBuildMode();
+          if (this._selectedToolId === slot.id) {
+            this._selectedToolId = null;
+            this.game.showDialog('道具を外した');
+          } else {
+            this._selectedToolId = slot.id;
+            this.game.showDialog(`${def.name}を装備！SPACEで使用`);
+          }
+          this.render();
         } else if (def.isBuildingItem) {
           this._selectedSeedId = null;
+          this._selectedToolId = null;
           this.game.farmMode.selectedCrop = null;
           if (this._selectedBuildingId === slot.id) {
             this._selectedBuildingId = null;

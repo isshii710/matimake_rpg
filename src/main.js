@@ -23,6 +23,7 @@ import { MagicSystem } from './magic/MagicSystem.js';
 import { ShopManager } from './ui/ShopUI.js';
 import { buildWorld, registerShops } from './world/WorldBuilder.js';
 import { BattleSystem } from './battle/BattleSystem.js';
+import { Companion } from './entities/Companion.js';
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -172,6 +173,20 @@ async function init() {
     game.shopMgr    = new ShopManager(game);
     game.battleSys  = new BattleSystem(game);
 
+    // Recruitable companions (appear in north/south villages)
+    game.companions = [
+      new Companion(scene, 'sora', 'ソラ', '⚔', 0xcc3333, 22, 16, game.grid, {
+        hp: 80, atk: [14, 22],
+        description: '戦士。近くで戦ってくれる。',
+        followIndex: 0,
+      }),
+      new Companion(scene, 'luna', 'ルナ', '✨', 0x6633bb, 44, 49, game.grid, {
+        hp: 60, atk: [22, 36],
+        description: '魔法使い。強力な魔法攻撃。',
+        followIndex: 1,
+      }),
+    ];
+
     document.getElementById('save-btn')?.addEventListener('click', () => game.saveSys.save());
     document.getElementById('bag-btn')?.addEventListener('click', () => {
       game.chestUI?.close();
@@ -291,6 +306,10 @@ function onCanvasClick(e) {
     else { game.showDialog('もっと近づいてから！'); return; }
   }
 
+  for (const c of game.companions) {
+    const cg = game.grid.worldToGrid(c.position.x, c.position.z);
+    if (Math.abs(cg.gx - gx) <= 1 && Math.abs(cg.gz - gz) <= 1) { c.interact(game); return; }
+  }
   for (const npc of game.npcs) {
     const ng = game.grid.worldToGrid(npc.position.x, npc.position.z);
     if (Math.abs(ng.gx - gx) <= 1 && Math.abs(ng.gz - gz) <= 1) { npc.interact(game); return; }
@@ -335,6 +354,9 @@ function handleShortcuts() {
 }
 
 function interactNearby() {
+  for (const c of game.companions) {
+    if (game.player.position.distanceTo(c.position) < 2.5) { c.interact(game); return; }
+  }
   for (const npc of game.npcs) {
     if (game.player.position.distanceTo(npc.position) < 2.5) { npc.interact(game); return; }
   }
@@ -374,6 +396,7 @@ function loop(time) {
   game.magicSys?.update(delta);
   game.buildSys.update(camera);
   for (const npc of game.npcs) npc.update(delta);
+  for (const c of game.companions) c.update(delta, game.player.position, game.enemyMgr.enemies, game);
   game.hud.update(delta);
   game.hud.updateQuests(game.questMgr.active);
   updateCamera();

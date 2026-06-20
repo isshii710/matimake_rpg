@@ -106,6 +106,17 @@ export class BattleSystem {
       return;
     }
 
+    // Companion turns (auto)
+    const compMsgs = this._companionActs(enemy);
+    for (const m of compMsgs) { this._addLog(m); this._render(); }
+    if (enemy.dead) {
+      const xp = enemy.def.xp || 5;
+      this._addLog(`${enemy.def.name}を倒した！ ${xp}XP獲得`);
+      this._render();
+      setTimeout(() => this.endBattle(true), 1800);
+      return;
+    }
+
     setTimeout(() => this._enemyTurn(), 900);
   }
 
@@ -131,6 +142,15 @@ export class BattleSystem {
       this._phase = 'player';
       this._render();
     }, 900);
+  }
+
+  _companionActs(enemy) {
+    const msgs = [];
+    for (const c of this.game.companions || []) {
+      if (!c.recruited || enemy.dead) continue;
+      msgs.push(c.battleAct(enemy, this.game));
+    }
+    return msgs;
   }
 
   _addLog(msg) {
@@ -169,7 +189,7 @@ export class BattleSystem {
         display:flex; flex-direction:column; gap:3px;
       "></div>
 
-      <div id="b-player-area" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+      <div id="b-player-area" style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
         <div>
           <div style="color:#f0d880;font-size:13px;font-weight:bold;">プレイヤー</div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
@@ -186,6 +206,7 @@ export class BattleSystem {
             </div>
           </div>
         </div>
+        <div id="b-companions" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
 
       <div id="b-commands" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
@@ -234,6 +255,28 @@ export class BattleSystem {
     logEl.innerHTML = this._log.map((msg, i) =>
       `<div style="color:${i === 0 ? '#f0e0a0' : '#807060'};font-size:${i === 0 ? 13 : 11}px;">${msg}</div>`
     ).join('');
+
+    // Companion HP bars
+    const compEl = this._el.querySelector('#b-companions');
+    if (compEl) {
+      compEl.innerHTML = '';
+      for (const c of this.game.companions || []) {
+        if (!c.recruited) continue;
+        const pct = (c.hp / c.maxHp) * 100;
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <div style="color:#d0e8f0;font-size:12px;font-weight:bold;">${c.icon} ${c.name}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+            <span style="color:#a08040;font-size:10px;">HP</span>
+            <div style="width:80px;height:8px;background:#1a0e04;border:1px solid #4a3010;border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2288aa,#55ccee);transition:width 0.3s;"></div>
+            </div>
+            <span style="color:#88ccdd;font-size:10px;">${c.hp}/${c.maxHp}</span>
+          </div>
+        `;
+        compEl.appendChild(div);
+      }
+    }
 
     // Disable commands when not player turn
     const disabled = this._phase !== 'player';

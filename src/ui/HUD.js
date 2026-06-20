@@ -11,6 +11,8 @@ export class HUD {
     this._modeLabel = document.getElementById('mode-label');
     this._damageFlash = document.getElementById('damage-flash');
     this._mpBar = document.getElementById('mp-fill');
+    this._partyPanel = document.getElementById('party-panel');
+    this._partyList  = document.getElementById('party-list');
   }
 
   flashDamage() {
@@ -41,6 +43,9 @@ export class HUD {
     if (mag && this._mpBar) {
       this._mpBar.style.width = ((mag.mp / mag.maxMp) * 100) + '%';
     }
+
+    // Party panel
+    this._updateParty();
 
     // Day/season
     if (this._dayLabel) this._dayLabel.textContent = this.game.season.getLabel();
@@ -74,6 +79,25 @@ export class HUD {
         this._modeLabel.style.display = 'none';
       }
     }
+  }
+
+  _updateParty() {
+    if (!this._partyPanel || !this._partyList) return;
+    const companions = (this.game.companions || []).filter(c => c.recruited);
+    if (companions.length === 0) {
+      this._partyPanel.style.display = 'none';
+      return;
+    }
+    this._partyPanel.style.display = 'block';
+    // Position below stats panel (approx 140px from top for stats + offset)
+    this._partyPanel.style.top = (12 + 130 + 8) + 'px';
+    this._partyList.innerHTML = companions.map(c => {
+      const pct = (c.hp / c.maxHp) * 100;
+      return `<div class="party-row">
+        <div class="party-name">${c.icon} ${c.name}</div>
+        <div class="party-bar-bg"><div class="party-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
   }
 
   updateQuests(quests) {

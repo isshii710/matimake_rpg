@@ -58,6 +58,26 @@ export class QuestManager {
     }
   }
 
+  restoreProgress(activeData, completedIds) {
+    this.active = [];
+    this.completed = [];
+    for (const q of QUESTS) {
+      if (completedIds.includes(q.id)) {
+        this.completed.push(JSON.parse(JSON.stringify(q)));
+        continue;
+      }
+      const copy = JSON.parse(JSON.stringify(q));
+      const saved = activeData.find(a => a.id === q.id);
+      if (saved) {
+        for (const obj of copy.objectives) {
+          const so = saved.objectives.find(o => o.id === obj.id);
+          if (so) obj.current = so.current;
+        }
+      }
+      this.active.push(copy);
+    }
+  }
+
   getProgress(questId) {
     const q = this.active.find(q => q.id === questId);
     if (!q) return null;

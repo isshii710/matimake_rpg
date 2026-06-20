@@ -76,6 +76,14 @@ export const BUILDINGS = {
     color: 0x6688AA, solid: false,
     description: '体を休めるベッド',
   },
+  chest: {
+    id: 'chest', name: 'チェスト', category: '家具',
+    cost: { wood: 5 },
+    w: 0.8, h: 0.6, d: 0.6,
+    color: 0x8B5A2B, solid: false,
+    isChest: true,
+    description: 'アイテムを保管するチェスト（20スロット）',
+  },
   well: {
     id: 'well', name: '井戸', category: '農業',
     cost: { stone: 5 },

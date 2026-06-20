@@ -1,0 +1,53 @@
+import { ITEMS } from '../data/Items.js';
+
+export class BackpackUI {
+  constructor(game) {
+    this.game = game;
+    this._el = document.getElementById('backpack-panel');
+    this._open = false;
+
+    const closeBtn = document.getElementById('backpack-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+  }
+
+  toggle() {
+    this._open = !this._open;
+    if (this._el) this._el.style.display = this._open ? 'block' : 'none';
+    if (this._open) this.render();
+  }
+
+  close() {
+    this._open = false;
+    if (this._el) this._el.style.display = 'none';
+  }
+
+  render() {
+    const el = document.getElementById('backpack-grid');
+    if (!el) return;
+    const inv = this.game.inventory;
+    el.innerHTML = '';
+    for (let i = 0; i < inv.maxSlots; i++) {
+      const slot = inv.slots[i];
+      const div = document.createElement('div');
+      div.className = 'inv-slot' + (slot ? '' : ' empty');
+      if (slot) {
+        const def = ITEMS[slot.id] || {};
+        div.innerHTML = `<span class="inv-icon">${def.icon || '?'}</span><span class="inv-count">${slot.count}</span>`;
+        div.title = def.name || slot.id;
+        const isSeed = slot.id.endsWith('_seed');
+        const isSelected = slot.id === inv._selectedSeedId;
+        if (isSelected) div.classList.add('selected');
+        if (isSeed) {
+          div.addEventListener('click', () => {
+            inv._selectedSeedId = inv._selectedSeedId === slot.id ? null : slot.id;
+            const cropId = slot.id.replace('_seed', '');
+            this.game.farmMode.selectedCrop = inv._selectedSeedId ? cropId : null;
+            inv.render();
+            this.render();
+          });
+        }
+      }
+      el.appendChild(div);
+    }
+  }
+}

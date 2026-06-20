@@ -14,6 +14,9 @@ import { Inventory } from './ui/Inventory.js';
 import { BuildMenu } from './ui/BuildMenu.js';
 import { DPad } from './ui/DPad.js';
 import { QuestManager } from './quest/QuestManager.js';
+import { SaveSystem } from './save/SaveSystem.js';
+import { BackpackUI } from './ui/BackpackUI.js';
+import { ChestUI } from './ui/ChestUI.js';
 import { TILE } from './world/TileTypes.js';
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -141,14 +144,33 @@ async function init() {
       new NPC(scene, 'farmer', '農夫', 0x2D5A27, 30, 34, game.grid),
     ];
 
-    placeStarterBuildings();
+    game.saveSys    = new SaveSystem(game);
+    game.backpackUI = new BackpackUI(game);
+    game.chestUI    = new ChestUI(game);
+
+    document.getElementById('save-btn')?.addEventListener('click', () => game.saveSys.save());
+    document.getElementById('bag-btn')?.addEventListener('click', () => {
+      game.chestUI?.close();
+      game.backpackUI.toggle();
+    });
+
+    // Try to load a saved game; otherwise place starter buildings
+    const hadSave = game.saveSys.hasSave();
+    if (hadSave) {
+      game.saveSys.load();
+    } else {
+      placeStarterBuildings();
+    }
 
     // postprocessingは非同期で（失敗してもゲームは動く）
     composer = await setupPostProcessing();
     game.composer = composer;
 
     hideLoading();
-    setTimeout(() => game.showDialog('ようこそ！WASDで移動・SPACEで攻撃・Bで建設・Eで調べる'), 600);
+    const welcomeMsg = hadSave
+      ? 'セーブデータを読み込みました！Sキーでセーブ・Iキーでバッグ'
+      : 'ようこそ！WASDで移動・SPACEで攻撃・Bで建設・Eで調べる・Sでセーブ';
+    setTimeout(() => game.showDialog(welcomeMsg), 600);
     requestAnimationFrame(loop);
 
   } catch (err) {
@@ -240,6 +262,11 @@ function onCanvasClick(e) {
 
   const building = game.buildSys.getBuilding(gx, gz);
   if (building?.def?.isWell) { game.inventory.add('water_bucket', 1); game.showDialog('水バケツを汲んだ！'); return; }
+  if (building?.def?.isChest) {
+    const dist = Math.hypot(game.player.position.x - pt.x, game.player.position.z - pt.z);
+    if (dist < 3) { game.chestUI.open(building.gx, building.gz); return; }
+    else { game.showDialog('もっと近づいてから！'); return; }
+  }
 
   for (const npc of game.npcs) {
     const ng = game.grid.worldToGrid(npc.position.x, npc.position.z);
@@ -251,6 +278,13 @@ function onCanvasClick(e) {
 function handleShortcuts() {
   if (keys['KeyB'] && !prevKeys['KeyB']) game.buildMenu.toggle();
   if (keys['KeyE'] && !prevKeys['KeyE']) interactNearby();
+  if (keys['KeyI'] && !prevKeys['KeyI']) {
+    game.chestUI?.close();
+    game.backpackUI.toggle();
+  }
+  if (keys['KeyS'] && !prevKeys['KeyS']) {
+    if (!game.buildSys.mode && !game.buildSys.demolishMode) game.saveSys.save();
+  }
   if (keys['KeyR'] && !prevKeys['KeyR']) {
     if (game.buildSys.mode) game.buildSys.rotate();
   }
@@ -259,7 +293,9 @@ function handleShortcuts() {
     else game.buildSys.enterDemolishMode();
   }
   if (keys['Escape'] && !prevKeys['Escape']) {
-    if (game.buildSys.mode || game.buildSys.demolishMode) game.buildMenu.exitBuildMode();
+    if (game.chestUI?._isOpen) { game.chestUI.close(); }
+    else if (game.backpackUI?._open) { game.backpackUI.close(); }
+    else if (game.buildSys.mode || game.buildSys.demolishMode) game.buildMenu.exitBuildMode();
     else { game.farmMode.selectedCrop = null; game.inventory._selectedSeedId = null; game.inventory.render(); }
   }
   Object.assign(prevKeys, keys);
@@ -273,6 +309,7 @@ function interactNearby() {
   for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
     const b = game.buildSys.getBuilding(gx + dx, gz + dz);
     if (b?.def?.isWell) { game.inventory.add('water_bucket', 1); game.showDialog('水バケツを汲んだ！💧'); return; }
+    if (b?.def?.isChest) { game.chestUI.open(b.gx, b.gz); return; }
     const plot = game.farmMgr.getPlot(gx + dx, gz + dz);
     if (plot?.state === 'ready') { game.farmMgr.harvest(gx + dx, gz + dz); return; }
     if ((plot?.state === 'planted' || plot?.state === 'growing') && game.inventory.has('water_bucket', 1)) { game.farmMgr.water(gx + dx, gz + dz); return; }
@@ -288,6 +325,7 @@ function loop(time) {
   lastTime = time;
 
   handleShortcuts();
+  game.saveSys.update(delta);
   game.season.update(delta);
   game.player.update(delta, keys, game.dpad);
   game.enemyMgr.update(delta);

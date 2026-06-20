@@ -471,7 +471,135 @@
 
       /* ダイアログ: インベントリの上へ */
       #dialog-box { bottom: 90px; font-size: 12px; padding: 8px 16px; }
+
+      /* バックパック: フル幅 */
+      #backpack-panel { width: 92vw; }
+      #backpack-grid { grid-template-columns: repeat(4, 1fr); }
+
+      /* チェストモーダル: 縦並び */
+      #chest-modal { width: 94vw; max-height: 85vh; overflow-y: auto; }
+      .chest-cols { flex-direction: column; }
+      .chest-grid { grid-template-columns: repeat(5, 1fr); }
+      .chest-inv-slot { height: 38px !important; }
     }
+
+    /* ── Backpack panel ─────────────────────────────────────── */
+    #backpack-panel {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 340px;
+      background: rgba(10, 6, 2, 0.97);
+      border: 1px solid #8B6914;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 30;
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.9);
+    }
+    #backpack-panel h3 {
+      color: #d4a540;
+      font-size: 13px;
+      margin-bottom: 10px;
+      text-align: center;
+      border-bottom: 1px solid #4a3010;
+      padding-bottom: 6px;
+    }
+    #backpack-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+    }
+    #backpack-close {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      background: rgba(40, 24, 8, 0.9);
+      border: 1px solid #6B4F14;
+      border-radius: 4px;
+      color: #a08040;
+      padding: 5px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #backpack-close:hover { background: rgba(80, 50, 12, 0.9); }
+
+    /* ── Chest modal ─────────────────────────────────────────── */
+    #chest-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(700px, 96vw);
+      background: rgba(10, 6, 2, 0.97);
+      border: 1px solid #8B6914;
+      border-radius: 8px;
+      padding: 14px;
+      z-index: 30;
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.9);
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chest-cols {
+      display: flex;
+      gap: 12px;
+    }
+    .chest-col { flex: 1; }
+    .chest-col h4 {
+      color: #d4a540;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #4a3010;
+      padding-bottom: 4px;
+    }
+    .chest-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+    .chest-inv-slot { width: auto !important; height: 46px !important; }
+    #chest-close {
+      display: block;
+      width: 100%;
+      background: rgba(40, 24, 8, 0.9);
+      border: 1px solid #6B4F14;
+      border-radius: 4px;
+      color: #a08040;
+      padding: 5px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #chest-close:hover { background: rgba(80, 50, 12, 0.9); }
+    .chest-hint { font-size: 10px; color: #605040; text-align: center; }
+
+    /* ── Save / Bag buttons ─────────────────────────────────── */
+    #save-btn {
+      background: rgba(12, 20, 8, 0.92);
+      border: 1px solid #3a6a22;
+      border-radius: 5px;
+      color: #88cc66;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    #save-btn:hover { background: rgba(24, 50, 12, 0.95); }
+    #bag-btn {
+      background: rgba(20, 14, 4, 0.92);
+      border: 1px solid #6B4F14;
+      border-radius: 5px;
+      color: #c0a040;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+    #bag-btn:hover { background: rgba(50, 35, 8, 0.95); }
 
     /* ── Misc ───────────────────────────────────────────────── */
     button { font-family: inherit; }
@@ -515,10 +643,12 @@
 
   <!-- Build menu -->
   <div id="build-panel">
-    <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
+    <div style="display:flex;gap:5px;justify-content:center;align-items:center;flex-wrap:wrap;">
       <button id="build-toggle">🔨 建設 [B]</button>
       <button id="demolish-toggle">⛏ 撤去 [D]</button>
       <button id="rotate-btn" title="回転 [R]">↻</button>
+      <button id="bag-btn" title="バッグ [I]">🎒</button>
+      <button id="save-btn" title="セーブ [S]">💾</button>
     </div>
     <div id="build-menu" style="display:none;">
       <div id="build-tabs"></div>
@@ -541,14 +671,38 @@
   <div id="controls-hint">
     WASD / ↑↓←→ : 移動<br>
     Space : 攻撃<br>
-    E : 調べる / 水汲み / 収穫<br>
+    E : 調べる / 水汲み / 収穫 / チェスト<br>
     B : 建設メニュー<br>
-    クリック : 建設・農業・会話<br>
-    R + クリック : 建物撤去
+    I : バッグ（全アイテム）<br>
+    S : セーブ<br>
+    クリック : 建設・農業・会話
   </div>
 
   <!-- Mobile attack button -->
   <button id="attack-btn">⚔</button>
+
+  <!-- Backpack panel (I key / 🎒 button) -->
+  <div id="backpack-panel">
+    <h3>🎒 バッグ（全アイテム）[I]</h3>
+    <div id="backpack-grid"></div>
+    <button id="backpack-close">閉じる [Esc]</button>
+  </div>
+
+  <!-- Chest modal -->
+  <div id="chest-modal">
+    <div class="chest-cols">
+      <div class="chest-col">
+        <h4>📦 チェスト（クリックで取り出す）</h4>
+        <div id="chest-slots" class="chest-grid"></div>
+      </div>
+      <div class="chest-col">
+        <h4>🎒 インベントリ（クリックで預ける）</h4>
+        <div id="chest-player-slots" class="chest-grid"></div>
+      </div>
+    </div>
+    <div class="chest-hint">アイテムをクリックして移動</div>
+    <button id="chest-close">閉じる [Esc]</button>
+  </div>
 
 </div>
 

@@ -4,7 +4,7 @@ import { BUILDINGS } from './Buildings.js';
 // Building layer: 0=ground(floor/furniture), 1=wall, 2=roof
 const LAYER = {
   wood_floor: 0, stone_floor: 0,
-  campfire: 0, lantern: 0, table: 0, bed: 0, well: 0, farm_plot: 0,
+  campfire: 0, lantern: 0, table: 0, bed: 0, well: 0, farm_plot: 0, chest: 0,
   wood_wall: 1, stone_wall: 1, door: 1,
   roof: 2,
 };
@@ -26,6 +26,7 @@ export class BuildSystem {
 
     this._buildings = new Map(); // lkey -> { id, mesh, light, def, gx, gz, layer }
     this._solidCells = new Set();
+    this._chestInventories = new Map(); // `${gx},${gz}` -> [{id,count}]
 
     this._ghost = null;
     this._raycaster = new THREE.Raycaster();
@@ -123,6 +124,7 @@ export class BuildSystem {
 
     this.game.questMgr.onEvent('build', { target: this.selectedId });
     if (def.isWell) this.game.showDialog('井戸を建てた！近くでEを押すと水バケツを汲める。');
+    if (def.isChest) this.game.showDialog('チェストを建てた！近づいてクリック（またはE）で開ける。');
 
     return true;
   }
@@ -176,6 +178,37 @@ export class BuildSystem {
       }
     }
     return false;
+  }
+
+  getChestInventory(gx, gz) {
+    const key = `${gx},${gz}`;
+    if (!this._chestInventories.has(key)) this._chestInventories.set(key, []);
+    return this._chestInventories.get(key);
+  }
+
+  // Place building without resource deduction (used by save system)
+  placeFromSave(id, gx, gz, layer, rotation = 0) {
+    const def = BUILDINGS[id];
+    if (!def) return false;
+    const key = lkey(gx, gz, layer);
+    if (this._buildings.has(key)) return false;
+
+    const mesh = this._createMesh(def);
+    const { wx, wz } = this.grid.gridToWorld(gx, gz);
+    mesh.position.set(wx, this._yFor(id, def), wz);
+    mesh.rotation.y = rotation * Math.PI / 2;
+    if (layer === 2) { mesh.material.transparent = true; mesh.material.opacity = 1.0; }
+    this.scene.add(mesh);
+
+    let light = null;
+    if (def.light) {
+      light = new THREE.PointLight(def.light.color, def.light.intensity, def.light.distance);
+      light.position.set(wx, 1.5, wz);
+      this.scene.add(light);
+    }
+    this._buildings.set(key, { id, mesh, light, def, gx, gz, layer });
+    if (def.solid) this._solidCells.add(`${gx},${gz}`);
+    return true;
   }
 
   // ── Update (ghost + roof transparency) ───────────────────────────────────
